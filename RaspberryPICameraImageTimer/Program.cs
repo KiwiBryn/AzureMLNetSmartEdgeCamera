@@ -84,7 +84,7 @@ namespace devMobile.devMobile.IoT.MachineLearning.RaspberryPICameraImageTimer
 					// V4 Image no preview
 					//process.StartInfo.Arguments = $"-o {_applicationSettings.ImageFilenameLocal} --rotation 180 --nopreview";
 					// V5 Image no preview, no timeout
-					process.StartInfo.Arguments = $"-o {_applicationSettings.ImageFilenameLocal} --nopreview -t 1 --rotation 180";
+					process.StartInfo.Arguments = $"-o {_applicationSettings.ImageFilepathLocal} --nopreview -t 1 --rotation 180";
 					//process.StartInfo.RedirectStandardOutput = true;
 					// V2 No diagnostics
 					process.StartInfo.RedirectStandardError = true;

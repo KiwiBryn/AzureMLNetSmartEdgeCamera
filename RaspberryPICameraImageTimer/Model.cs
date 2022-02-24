@@ -23,6 +23,6 @@ namespace devMobile.devMobile.IoT.MachineLearning.RaspberryPICameraImageTimer.Mo
 		public TimeSpan ImageImageTimerDue { get; set; }
 		public TimeSpan ImageTimerPeriod { get; set; }
 
-		public string ImageFilenameLocal { get; set; }
+		public string ImageFilepathLocal { get; set; }
 	}
 }
