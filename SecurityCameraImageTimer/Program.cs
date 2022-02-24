@@ -74,7 +74,7 @@ namespace devMobile.IoT.MachineLearning.SecurityCameraImageTimer
 
 			try
 			{
-				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Camera Image download start");
+				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss.fff} Security Camera Image download start");
 
 				NetworkCredential networkCredential = new NetworkCredential()
 				{
