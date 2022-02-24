@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <RootNamespace>devMobile.IoT.SecurityCameraImageTimer</RootNamespace>
+    <RootNamespace>devMobile.IoT.MachineLearning.SecurityCameraImageTimer</RootNamespace>
     <UserSecretsId>210edd09-06fe-4f66-8af8-f2852ffa6998</UserSecretsId>
   </PropertyGroup>
 
