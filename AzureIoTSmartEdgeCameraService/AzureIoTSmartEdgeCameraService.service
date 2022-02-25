@@ -1,0 +1,10 @@
+﻿[Unit]
+Description=Azure IoT Smart Edge Camera Service
+
+[Service]
+Type=notify
+ExecStart=/home/pi/.dotnet/dotnet /usr/sbin/AzureIoTSmartEdgeCameraService/AzureIoTSmartEdgeCameraService.dll
+WorkingDirectory=/usr/sbin/AzureIoTSmartEdgeCameraService
+
+[Install]
+WantedBy=multi-user.target

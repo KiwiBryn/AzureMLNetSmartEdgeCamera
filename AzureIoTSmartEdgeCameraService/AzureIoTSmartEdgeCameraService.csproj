@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <UserSecretsId>dotnet-AzureIoTSmartEdgeCameraService-8347D0E8-346F-4073-99A1-4B4B9BA3FC38</UserSecretsId>
+    <RootNamespace>devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCameraService</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE;CAMERA_SECURITY,AZURE_IOT_HUB_CONNECTION</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="YoloV5\yolov5n.onnx" />
+    <None Remove="YoloV5\yolov5n6.onnx" />
+    <None Remove="YoloV5\yolov5s.onnx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="YoloV5\yolov5n.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="YoloV5\yolov5n6.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="YoloV5\yolov5s.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.10.0" />
+    <PackageReference Include="Yolov5Net" Version="1.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="AzureIoTSmartEdgeCameraService.service">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

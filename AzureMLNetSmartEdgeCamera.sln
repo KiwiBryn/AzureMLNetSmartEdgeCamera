@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RaspberryPICameraImageTimer
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureIoTSmartEdgeCamera", "AzureIoTSmartEdgeCamera\AzureIoTSmartEdgeCamera.csproj", "{81ACF477-D5B6-4C0A-AA00-0796FF94E2B6}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureIoTSmartEdgeCameraService", "AzureIoTSmartEdgeCameraService\AzureIoTSmartEdgeCameraService.csproj", "{450A70D8-BF72-4E87-9E65-41D149E62EE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{81ACF477-D5B6-4C0A-AA00-0796FF94E2B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81ACF477-D5B6-4C0A-AA00-0796FF94E2B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81ACF477-D5B6-4C0A-AA00-0796FF94E2B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
