@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Configuration;
 
-namespace devMobile.devMobile.IoT.MachineLearning.RaspberryPICameraImageTimer
+namespace devMobile.IoT.MachineLearning.RaspberryPICameraImageTimer
 {
 	class Program
 	{

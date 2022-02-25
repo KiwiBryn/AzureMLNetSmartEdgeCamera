@@ -16,7 +16,7 @@
 //---------------------------------------------------------------------------------
 using System;
 
-namespace devMobile.devMobile.IoT.MachineLearning.RaspberryPICameraImageTimer.Model
+namespace devMobile.IoT.MachineLearning.RaspberryPICameraImageTimer.Model
 {
 	public class ApplicationSettings
 	{
