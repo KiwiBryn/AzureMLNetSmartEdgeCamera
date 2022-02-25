@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureIoTSmartEdgeCamera", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureIoTSmartEdgeCameraService", "AzureIoTSmartEdgeCameraService\AzureIoTSmartEdgeCameraService.csproj", "{450A70D8-BF72-4E87-9E65-41D149E62EE2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoloV5ObjectDetectionCamera", "YoloV5ObjectDetectionCamera\YoloV5ObjectDetectionCamera.csproj", "{C66569D4-9E8A-4AFC-A92D-65259DB969B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{450A70D8-BF72-4E87-9E65-41D149E62EE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C66569D4-9E8A-4AFC-A92D-65259DB969B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C66569D4-9E8A-4AFC-A92D-65259DB969B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C66569D4-9E8A-4AFC-A92D-65259DB969B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C66569D4-9E8A-4AFC-A92D-65259DB969B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
