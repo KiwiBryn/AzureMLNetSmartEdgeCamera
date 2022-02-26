@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /AzureIoTSmartEdgeCameraService/ImageCamera.jpg
 /AzureIoTSmartEdgeCameraService/ImageMarkedup.jpg
+/SmartEdgeCameraAzureStorageService/ImageCamera.jpg
+/SmartEdgeCameraAzureStorageService/ImageMarkedup.jpg

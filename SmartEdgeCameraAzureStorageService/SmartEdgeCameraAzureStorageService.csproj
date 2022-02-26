@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <UserSecretsId>dotnet-SmartEdgeCameraAzureStorageService-880769BA-8C49-4601-984A-F0ABA4CC4A65</UserSecretsId>
+    <RootNamespace>devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE;CAMERA_SECURITY</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="YoloV5\yolov5n.onnx" />
+    <None Remove="YoloV5\yolov5n6.onnx" />
+    <None Remove="YoloV5\yolov5s.onnx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="YoloV5\yolov5n.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="YoloV5\yolov5n6.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="YoloV5\yolov5s.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.10.0" />
+    <PackageReference Include="Yolov5Net" Version="1.0.9" />
+  </ItemGroup>
+</Project>
