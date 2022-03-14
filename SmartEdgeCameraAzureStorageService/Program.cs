@@ -32,8 +32,12 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 				.ConfigureServices((hostContext, services) =>
 				{
 					services.Configure<ApplicationSettings>(hostContext.Configuration.GetSection("Application"));
+#if CAMERA_SECURITY
 					services.Configure<SecurityCameraSettings>(hostContext.Configuration.GetSection("SecurityCamera"));
+#endif
+#if CAMERA_RASPBERRY_PI
 					services.Configure<RaspberryPICameraSettings>(hostContext.Configuration.GetSection("RaspberryPICamera"));
+#endif
 					services.Configure<AzureStorageSettings>(hostContext.Configuration.GetSection("AzureStorage"));
 				})
 				.ConfigureLogging(logging =>
