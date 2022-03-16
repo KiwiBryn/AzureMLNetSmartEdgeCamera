@@ -30,6 +30,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 	using System.Threading.Tasks;
 
 	using Azure.Storage.Blobs;
+	using Azure.Storage.Blobs.Models;
 
 	using Microsoft.Extensions.Hosting;
 	using Microsoft.Extensions.Logging;
@@ -49,6 +50,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 		private readonly RaspberryPICameraSettings _raspberryPICameraSettings;
 #endif
 		private readonly AzureStorageSettings _azureStorageSettings;
+		private BlobServiceClient _imageBlobServiceClient;
+		private BlobContainerClient _imagecontainerClient;
 
 		private static YoloScorer<YoloCocoP5Model> _scorer = null;
 		private bool _cameraBusy = false;
@@ -78,10 +81,17 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			_logger.LogInformation("AzureIoT Smart Edge Camera Service starting");
+			_logger.LogInformation("Azure Storage Smart Edge Camera Service starting");
 
 			try
 			{
+				_logger.LogInformation("Azure Storage initialisation start");
+				_imageBlobServiceClient = new BlobServiceClient(_azureStorageSettings.ConnectionString);
+				_imagecontainerClient = _imageBlobServiceClient.GetBlobContainerClient(_applicationSettings.DeviceId.ToLower());
+
+				await _imagecontainerClient.CreateIfNotExistsAsync();
+				_logger.LogInformation("Azure Storage initialisation done");
+
 				_logger.LogInformation("YoloV5 model setup start");
 				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
 				_logger.LogInformation("YoloV5 model setup done");
@@ -105,7 +115,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 			{
 			}
 
-			_logger.LogInformation("AzureIoT Smart Edge Camera Service shutdown");
+			_logger.LogInformation("Azure Storage Smart Edge Camera Service shutdown");
 		}
 
 		private async void ImageUpdateTimerCallback(object state)
@@ -131,7 +141,13 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 #endif
 				if (_applicationSettings.ImageCameraUpload)
 				{
-					await AzureStorageImageUpload(requestAtUtc, _applicationSettings.ImageCameraFilepath, _azureStorageSettings.ImageCameraFilenameFormat);
+					_logger.LogTrace("Image camera upload start");
+
+					string imageFilenameCloud = string.Format(_azureStorageSettings.ImageCameraFilenameFormat, requestAtUtc);
+
+					await _imagecontainerClient.GetBlobClient(imageFilenameCloud).UploadAsync(_applicationSettings.ImageCameraFilepath, true);
+
+					_logger.LogTrace("Image camera upload done");
 				}
 
 				List<YoloPrediction> predictions;
@@ -156,11 +172,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 					_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
 				}
 
-				if (_applicationSettings.ImageMarkedupUpload && predictionsOfInterest.Any())
-				{
-					await AzureStorageImageUpload(requestAtUtc, _applicationSettings.ImageMarkedUpFilepath, _azureStorageSettings.ImageMarkedUpFilenameFormat);
-				}
-
 				var predictionsTally = predictions.Where(p => p.Score >= _applicationSettings.PredicitionScoreThreshold)
 											.GroupBy(p => p.Label.Name)
 											.Select(p => new
@@ -168,6 +179,29 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 												Label = p.Key,
 												Count = p.Count()
 											});
+
+				if (_applicationSettings.ImageMarkedupUpload && predictionsOfInterest.Any())
+				{
+					_logger.LogTrace("Image marked-up upload start");
+
+					string imageFilenameCloud = string.Format(_azureStorageSettings.ImageMarkedUpFilenameFormat, requestAtUtc);
+
+					BlobUploadOptions blobUploadOptions = new BlobUploadOptions()
+					{
+						Tags = new Dictionary<string, string>()
+					};
+
+					foreach (var predicition in predictionsTally)
+					{
+						blobUploadOptions.Tags.Add(predicition.Label, predicition.Count.ToString());
+					}
+
+					BlobClient blobClient = _imagecontainerClient.GetBlobClient(imageFilenameCloud);
+
+					await blobClient.UploadAsync(_applicationSettings.ImageMarkedUpFilepath, blobUploadOptions);
+
+					_logger.LogTrace("Image marked-up upload done");
+				}
 
 				if (_logger.IsEnabled(LogLevel.Information))
 				{
@@ -256,27 +290,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 
 			_logger.LogTrace("Image markup done");
 		}
-
-		public async Task AzureStorageImageUpload(DateTime requestAtUtc, string imageFilenameLocal, string format)
-		{
-			_logger.LogTrace("Image upload start");
-
-			BlobServiceClient imageBlobServiceClient = new BlobServiceClient(_azureStorageSettings.ConnectionString);
-			BlobContainerClient imagecontainerClient = imageBlobServiceClient.GetBlobContainerClient(_applicationSettings.DeviceId.ToLower());
-
-			await imagecontainerClient.CreateIfNotExistsAsync();
-
-			string imageFilenameCloud = string.Format(format, requestAtUtc);
-
-			if (!string.IsNullOrWhiteSpace(imageFilenameCloud))
-			{
-
-				BlobClient blobClientHistory = imagecontainerClient.GetBlobClient(imageFilenameCloud);
-
-				await blobClientHistory.UploadAsync(imageFilenameLocal, true);
-			}
-
-			_logger.LogTrace("Image upload done");
-		}
+		
 	}
 }
