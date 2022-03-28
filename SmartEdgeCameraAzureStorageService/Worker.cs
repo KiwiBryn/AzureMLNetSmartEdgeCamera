@@ -62,7 +62,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 			IOptions<SecurityCameraSettings> securityCameraSettings,
 #endif
 #if CAMERA_RASPBERRY_PI
-			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings
+			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings,
 #endif
 			IOptions<AzureStorageSettings> azureStorageSettings
 			)
@@ -139,17 +139,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 #if CAMERA_SECURITY
 				SecurityCameraImageCapture();
 #endif
-				if (_applicationSettings.ImageCameraUpload)
-				{
-					_logger.LogTrace("Image camera upload start");
-
-					string imageFilenameCloud = string.Format(_azureStorageSettings.ImageCameraFilenameFormat, requestAtUtc);
-
-					await _imagecontainerClient.GetBlobClient(imageFilenameCloud).UploadAsync(_applicationSettings.ImageCameraFilepath, true);
-
-					_logger.LogTrace("Image camera upload done");
-				}
-
 				List<YoloPrediction> predictions;
 
 				using (Image image = Image.FromFile(_applicationSettings.ImageCameraFilepath))
@@ -180,12 +169,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 												Count = p.Count()
 											});
 
-				if (_applicationSettings.ImageMarkedupUpload && predictionsOfInterest.Any())
+				if (predictionsOfInterest.Any())
 				{
-					_logger.LogTrace("Image marked-up upload start");
-
-					string imageFilenameCloud = string.Format(_azureStorageSettings.ImageMarkedUpFilenameFormat, requestAtUtc);
-
 					BlobUploadOptions blobUploadOptions = new BlobUploadOptions()
 					{
 						Tags = new Dictionary<string, string>()
@@ -196,11 +181,27 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 						blobUploadOptions.Tags.Add(predicition.Label, predicition.Count.ToString());
 					}
 
-					BlobClient blobClient = _imagecontainerClient.GetBlobClient(imageFilenameCloud);
+					if (_applicationSettings.ImageCameraUpload)
+					{
+						_logger.LogTrace("Image camera upload start");
 
-					await blobClient.UploadAsync(_applicationSettings.ImageMarkedUpFilepath, blobUploadOptions);
+						string imageFilenameCloud = string.Format(_azureStorageSettings.ImageCameraFilenameFormat, requestAtUtc);
 
-					_logger.LogTrace("Image marked-up upload done");
+						await _imagecontainerClient.GetBlobClient(imageFilenameCloud).UploadAsync(_applicationSettings.ImageCameraFilepath, blobUploadOptions);
+
+						_logger.LogTrace("Image camera upload done");
+					}
+
+					if (_applicationSettings.ImageMarkedupUpload)
+					{
+						_logger.LogTrace("Image marked-up upload start");
+
+						string imageFilenameCloud = string.Format(_azureStorageSettings.ImageMarkedUpFilenameFormat, requestAtUtc);
+
+						await _imagecontainerClient.GetBlobClient(imageFilenameCloud).UploadAsync(_applicationSettings.ImageMarkedUpFilepath, blobUploadOptions);
+
+						_logger.LogTrace("Image marked-up upload done");
+					}
 				}
 
 				if (_logger.IsEnabled(LogLevel.Information))
