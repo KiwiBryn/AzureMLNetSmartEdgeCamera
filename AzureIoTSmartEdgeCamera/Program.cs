@@ -32,6 +32,9 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #if PREDICTION_CLASSES || PREDICTION_CLASSES_OF_INTEREST
 	using System.Linq;
 #endif
+#if AZURE_DEVICE_TWIN
+	using System.Reflection;
+#endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
 	using System.Security.Cryptography;
 #endif
@@ -45,6 +48,9 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
 	using Microsoft.Azure.Devices.Client;
+#endif
+#if AZURE_DEVICE_TWIN
+	using Microsoft.Azure.Devices.Shared;
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
 	using Microsoft.Azure.Devices.Shared;
@@ -137,6 +143,26 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 				_deviceClient = await AzureIoTHubDpsConnection();
 #endif
 
+#if AZURE_DEVICE_TWIN
+				TwinCollection reportedProperties = new TwinCollection();
+
+				// This is from the OS 
+				reportedProperties["OSVersion"] = Environment.OSVersion.VersionString;
+				reportedProperties["MachineName"] = Environment.MachineName;
+				reportedProperties["ApplicationVersion"] = Assembly.GetAssembly(typeof(Program)).GetName().Version;
+
+				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+#endif
+
+#if AZURE_DEVICE_TWIN
+				await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback, null);
+
+				Twin twin = await _deviceClient.GetTwinAsync();
+
+				Console.WriteLine($"Desired:{twin.Properties.Desired.ToJson()}");
+				Console.WriteLine($"Reported:{twin.Properties.Reported.ToJson()}");
+#endif
+
 #if GPIO_SUPPORT
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} GPIO setup start");
 
@@ -183,6 +209,13 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 			}
 		}
+
+#if AZURE_DEVICE_TWIN
+		private static Task DesiredPropertyUpdateCallback(TwinCollection desiredProperties, object userContext)
+		{
+			Console.WriteLine($"desiredProperties {desiredProperties.ToJson()}");
+		}
+#endif
 
 		private static async void ImageUpdateTimerCallback(object state)
 		{
