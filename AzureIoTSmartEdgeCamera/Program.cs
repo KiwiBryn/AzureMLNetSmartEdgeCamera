@@ -378,7 +378,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 			{
 				using (var transport = new ProvisioningTransportHandlerAmqp(TransportFallbackType.TcpOnly))
 				{
-					ProvisioningDeviceClient provClient = ProvisioningDeviceClient.Create(_applicationSettings.GlobalDeviceEndpoint, _applicationSettings.AzureIoTHubDpsIDScope, securityProvider, transport);
+					ProvisioningDeviceClient provClient = ProvisioningDeviceClient.Create(_applicationSettings.AzureIoTHubDpsGlobalDeviceEndpoint, _applicationSettings.AzureIoTHubDpsIDScope, securityProvider, transport);
 
 					DeviceRegistrationResult result = await provClient.RegisterAsync();
 

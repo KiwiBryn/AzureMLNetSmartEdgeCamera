@@ -62,7 +62,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera.Model
 #endif
 
 #if AZURE_IOT_HUB_DPS_CONNECTION
-		public string GlobalDeviceEndpoint { get; set; }
+		public string AzureIoTHubDpsGlobalDeviceEndpoint { get; set; }
 		public string AzureIoTHubDpsIDScope { get; set; }
 		public string AzureIoTHubDpsGroupEnrollmentKey { get; set; }
 #endif
