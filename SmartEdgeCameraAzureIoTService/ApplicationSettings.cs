@@ -48,13 +48,28 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		public int ProcessWaitForExit { get; set; }
 	}
 
+#if AZURE_STORAGE_IMAGE_UPLOAD
+	public class AzureStorageSettings
+	{
+		public string AzureStorageConnectionString { get; set; }
+		public string AzureStorageImageInputFilenameFormat { get; set; }
+		public string AzureStorageImageOutputFilenameFormat { get; set; }
+	}
+#endif
+
 #if AZURE_IOT_HUB_CONNECTION
-		public string AzureIoTHubConnectionString { get; set; }
+	public class AzureIoTHubSettings
+	{
+		public string ConnectionString { get; set; }
+	}
 #endif
 
 #if AZURE_IOT_HUB_DPS_CONNECTION
+	public class AzureIoTHubDpsSettings
+	{
 		public string GlobalDeviceEndpoint { get; set; }
-		public string AzureIoTHubDpsIDScope { get; set; }
-		public string AzureIoTHubDpsGroupEnrollmentKey { get; set; }
+		public string IDScope { get; set; }
+		public string GroupEnrollmentKey { get; set; }
+	}
 #endif
 }

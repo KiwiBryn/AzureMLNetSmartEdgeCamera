@@ -26,15 +26,33 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_SECURITY
 	using System.Net;
 #endif
+#if AZURE_IOT_HUB_DPS_CONNECTION
+	using System.Security.Cryptography;
+	using System.Text;
+#endif
 	using System.Threading;
 	using System.Threading.Tasks;
 
+	using Microsoft.Azure.Devices.Client;
+#if AZURE_IOT_HUB_DPS_CONNECTION
+	using Microsoft.Azure.Devices.Shared;
+	using Microsoft.Azure.Devices.Provisioning.Client;
+	using Microsoft.Azure.Devices.Provisioning.Client.Transport;
+#endif
 	using Microsoft.Extensions.Hosting;
 	using Microsoft.Extensions.Logging;
 	using Microsoft.Extensions.Options;
 
 	using Yolov5Net.Scorer;
 	using Yolov5Net.Scorer.Models;
+
+	// Compile time options
+	// AZURE_IOT_HUB_CONNECTION
+	//		or
+	//	AZURE_IOT_HUB_DPS_CONNECTION
+	// AZURE_STORAGE_IMAGE_UPLOAD
+	//		or
+	// AZURE_IOT_HUB_IMAGE_UPLOAD
 
 	public class Worker : BackgroundService
 	{
@@ -46,16 +64,29 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_RASPBERRY_PI
 		private readonly RaspberryPICameraSettings _raspberryPICameraSettings;
 #endif
+#if AZURE_IOT_HUB_CONNECTION
+		private readonly AzureIoTHubSettings _azureIoTHubSettings;
+#endif
+#if AZURE_IOT_HUB_DPS_CONNECTION
+		private readonly AzureIoTHubDpsSettings _azureIoTHubDpsSettings;
+#endif
 		private static YoloScorer<YoloCocoP5Model> _scorer = null;
 		private bool _cameraBusy = false;
+		private static DeviceClient _deviceClient;
 
 		public Worker(ILogger<Worker> logger,
 			IOptions<ApplicationSettings> applicationSettings,
 #if CAMERA_SECURITY
-			IOptions<SecurityCameraSettings> securityCameraSettings
+			IOptions<SecurityCameraSettings> securityCameraSettings,
 #endif
 #if CAMERA_RASPBERRY_PI
-			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings
+			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings,
+#endif
+#if AZURE_IOT_HUB_CONNECTION
+			IOptions<AzureIoTHubSettings> azureIoTHubSettings
+#endif
+#if AZURE_IOT_HUB_DPS_CONNECTION
+			IOptions<AzureIoTHubDpsSettings> azureIoTHubDpsSettings
 #endif
 			)
 		{
@@ -68,6 +99,12 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_RASPBERRY_PI
 			_raspberryPICameraSettings = raspberryPICameraSettings.Value;
 #endif
+#if AZURE_IOT_HUB_CONNECTION
+			_azureIoTHubSettings = azureIoTHubSettings.Value;
+#endif
+#if AZURE_IOT_HUB_DPS_CONNECTION
+			_azureIoTHubDpsSettings = azureIoTHubDpsSettings.Value;
+#endif
 		}
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -76,6 +113,21 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 			try
 			{
+#if AZURE_IOT_HUB_CONNECTION
+				_deviceClient = await AzureIoTHubConnection();
+#endif
+
+#if AZURE_IOT_HUB_DPS_CONNECTION
+				_deviceClient = await AzureIoTHubDpsConnection();
+#endif
+
+				_logger.LogTrace("YoloV5 model setup start");
+
+				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
+
+				_logger.LogTrace("YoloV5 model setup done");
+
+
 				Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
 				try
@@ -93,6 +145,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			}
 			finally
 			{
+				_deviceClient?.Dispose();
 			}
 
 			_logger.LogInformation("Azure IoT Smart Edge Camera Service shutdown");
@@ -210,6 +263,62 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			}
 
 			_logger.LogTrace("Raspberry PI Image capture done");
+		}
+#endif
+
+#if AZURE_IOT_HUB_CONNECTION
+		private async Task<DeviceClient> AzureIoTHubConnection()
+		{
+			_logger.LogTrace("Azure IoT Hub connection start");
+
+			DeviceClient deviceClient = DeviceClient.CreateFromConnectionString( _azureIoTHubSettings.ConnectionString, _applicationSettings.DeviceId);
+
+			await deviceClient.OpenAsync();
+
+			_logger.LogTrace("Azure IoT Hub connection done");
+
+			return deviceClient;
+		}
+#endif
+
+#if AZURE_IOT_HUB_DPS_CONNECTION
+		private async Task<DeviceClient> AzureIoTHubDpsConnection()
+		{
+			string deviceKey;
+			DeviceClient deviceClient;
+
+			_logger.LogTrace("Azure IoT Hub DPS connection start");
+
+			using (var hmac = new HMACSHA256(Convert.FromBase64String(_azureIoTHubDpsSettings.GroupEnrollmentKey)))
+			{
+				deviceKey = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(_applicationSettings.DeviceId)));
+			}
+
+			using (var securityProvider = new SecurityProviderSymmetricKey(_applicationSettings.DeviceId, deviceKey, null))
+			{
+				using (var transport = new ProvisioningTransportHandlerAmqp(TransportFallbackType.TcpOnly))
+				{
+					ProvisioningDeviceClient provClient = ProvisioningDeviceClient.Create(_azureIoTHubDpsSettings.GlobalDeviceEndpoint, _azureIoTHubDpsSettings.IDScope, securityProvider, transport);
+
+					DeviceRegistrationResult result = await provClient.RegisterAsync();
+
+					_logger.LogTrace("Hub:{0} DeviceID:{1} RegistrationID:{2} Status:{3}",result.AssignedHub,result.DeviceId, result.RegistrationId,result.Status);
+					if (result.Status != ProvisioningRegistrationStatusType.Assigned)
+					{
+						_logger.LogTrace("DeviceID:{0} {1} already assigned", result.DeviceId, result.Status);
+					}
+
+					IAuthenticationMethod authentication = new DeviceAuthenticationWithRegistrySymmetricKey(result.DeviceId, (securityProvider as SecurityProviderSymmetricKey).GetPrimaryKey());
+
+					deviceClient = DeviceClient.Create(result.AssignedHub, authentication, TransportType.Amqp_Tcp_Only);
+				}
+			}
+
+			await deviceClient.OpenAsync();
+
+			_logger.LogTrace("Azure IoT Hub DPS connection start");
+
+			return deviceClient;
 		}
 #endif
 
