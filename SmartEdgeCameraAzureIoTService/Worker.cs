@@ -183,7 +183,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
 				}
 
-				var predictionsOfInterest = predictions.Where(p => p.Score > _applicationSettings.PredicitionScoreThreshold)
+				var predictionsOfInterest = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold)
 												.Select(c => c.Label.Name)
 												.Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
@@ -223,7 +223,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Camera image download, post procesing, telemetry failed");
+				_logger.LogError(ex, "Camera image download, post processing, telemetry failed");
 			}
 			finally
 			{
@@ -316,7 +316,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 					DeviceRegistrationResult result = await provClient.RegisterAsync();
 
-					_logger.LogTrace("Hub:{0} DeviceID:{1} RegistrationID:{2} Status:{3}",result.AssignedHub,result.DeviceId, result.RegistrationId,result.Status);
+					_logger.LogInformation("Hub:{0} DeviceID:{1} RegistrationID:{2} Status:{3}",result.AssignedHub, result.DeviceId, result.RegistrationId,result.Status);
 					if (result.Status != ProvisioningRegistrationStatusType.Assigned)
 					{
 						_logger.LogTrace("DeviceID:{0} {1} already assigned", result.DeviceId, result.Status);
