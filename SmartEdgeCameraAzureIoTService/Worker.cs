@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------
-// Copyright (c) March 2022, devMobile Software
+// Copyright (c) April 2022, devMobile Software
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,9 +54,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	// AZURE_IOT_HUB_CONNECTION
 	//		or
 	//	AZURE_IOT_HUB_DPS_CONNECTION
-	// AZURE_STORAGE_IMAGE_UPLOAD
-	//		or
-	// AZURE_IOT_HUB_IMAGE_UPLOAD
 
 	public class Worker : BackgroundService
 	{
@@ -179,8 +176,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					_logger.LogTrace("Prediction start");
 					predictions = _scorer.Predict(image);
 					_logger.LogTrace("Prediction done");
-
-					OutputImageMarkup(image, predictions, _applicationSettings.ImageMarkedUpFilepath);
 				}
 
 				if (_logger.IsEnabled(LogLevel.Trace))
@@ -192,32 +187,32 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 												.Select(c => c.Label.Name)
 												.Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
-				if (_logger.IsEnabled(LogLevel.Trace))
+				if (predictionsOfInterest.Any())
 				{
-					_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
-				}
+					if (_logger.IsEnabled(LogLevel.Trace))
+					{
+						_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
+					}
 
-				var predictionsTally = predictionsOfInterest.GroupBy(p => p)
+					var predictionsTally = predictions.GroupBy(p => p.Label.Name)
 											.Select(p => new
 											{
 												Label = p.Key,
 												Count = p.Count()
 											});
 
-				if (_logger.IsEnabled(LogLevel.Information))
-				{
-					_logger.LogInformation("Predictions tally {0}", predictionsTally.ToList());
-				}
+					if (_logger.IsEnabled(LogLevel.Information))
+					{
+						_logger.LogInformation("Predictions tally {0}", predictionsTally.ToList());
+					}
 
-				JObject telemetryDataPoint = new JObject();
+					JObject telemetryDataPoint = new JObject();
 
-				foreach (var predictionTally in predictionsTally)
-				{
-					telemetryDataPoint.Add(predictionTally.Label, predictionTally.Count);
-				}
+					foreach (var predictionTally in predictionsTally)
+					{
+						telemetryDataPoint.Add(predictionTally.Label, predictionTally.Count);
+					}
 
-				try
-				{
 					using (Message message = new Message(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(telemetryDataPoint))))
 					{
 						message.Properties.Add("iothub-creation-time-utc", requestAtUtc.ToString("s", CultureInfo.InvariantCulture));
@@ -225,14 +220,10 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 						await _deviceClient.SendEventAsync(message);
 					}
 				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync cow counting failed {ex.Message}");
-				}
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Camera image download, post procesing, image upload, or telemetry failed");
+				_logger.LogError(ex, "Camera image download, post procesing, telemetry failed");
 			}
 			finally
 			{
@@ -294,7 +285,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		{
 			_logger.LogTrace("Azure IoT Hub connection start");
 
-			DeviceClient deviceClient = DeviceClient.CreateFromConnectionString( _azureIoTHubSettings.ConnectionString, _applicationSettings.DeviceId);
+			DeviceClient deviceClient = DeviceClient.CreateFromConnectionString(_azureIoTHubSettings.ConnectionString, _applicationSettings.DeviceId);
 
 			await deviceClient.OpenAsync();
 
@@ -344,29 +335,5 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			return deviceClient;
 		}
 #endif
-
-		public void OutputImageMarkup(Image image, List<YoloPrediction> predictions, string filepath)
-		{
-			_logger.LogTrace("Image markup start");
-
-			using (Graphics graphics = Graphics.FromImage(image))
-			{
-
-				foreach (var prediction in predictions) // iterate predictions to draw results
-				{
-					double score = Math.Round(prediction.Score, 2);
-
-					graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
-
-					var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
-
-					graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
-				}
-
-				image.Save(filepath);
-			}
-
-			_logger.LogTrace("Image markup done");
-		}
 	}
 }
