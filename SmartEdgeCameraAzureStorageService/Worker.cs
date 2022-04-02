@@ -211,7 +211,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Camera image download, post procesing, image upload, or telemetry failed");
+				_logger.LogError(ex, "Camera image download, post procesing, or image upload faileds");
 			}
 			finally
 			{
