@@ -256,7 +256,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 				}
 
 #if PREDICTION_CLASSES_OF_INTEREST
-				IEnumerable<string> predictionsOfInterest= predictions.Where(p=>p.Score > _applicationSettings.PredicitionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+				IEnumerable<string> predictionsOfInterest= predictions.Where(p=>p.Score > _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
 				if (predictionsOfInterest.Any())
 				{
@@ -435,7 +435,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
 			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync prediction information start");
 
-			foreach (var predictionTally in predictions.Where(p => p.Score >= _applicationSettings.PredicitionScoreThreshold).GroupBy(p => p.Label.Name)
+			foreach (var predictionTally in predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).GroupBy(p => p.Label.Name)
 							.Select(p => new
 							{
 								Label = p.Key,
