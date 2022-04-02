@@ -34,7 +34,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 
 		public string YoloV5ModelPath { get; set; }
 
-		public double PredicitionScoreThreshold { get; set; }
+		public double PredictionScoreThreshold { get; set; }
 		public List<String> PredictionLabelsOfInterest { get; set; }
 	}
 

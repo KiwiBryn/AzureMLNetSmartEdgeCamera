@@ -155,13 +155,13 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 					_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
 				}
 
-				var predictionsOfInterest = predictions.Where(p => p.Score > _applicationSettings.PredicitionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+				var predictionsOfInterest = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 				if (_logger.IsEnabled(LogLevel.Trace))
 				{
 					_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
 				}
 
-				var predictionsTally = predictions.Where(p => p.Score >= _applicationSettings.PredicitionScoreThreshold)
+				var predictionsTally = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold)
 											.GroupBy(p => p.Label.Name)
 											.Select(p => new
 											{
@@ -176,9 +176,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 						Tags = new Dictionary<string, string>()
 					};
 
-					foreach (var predicition in predictionsTally)
+					foreach (var prediction in predictionsTally)
 					{
-						blobUploadOptions.Tags.Add(predicition.Label, predicition.Count.ToString());
+						blobUploadOptions.Tags.Add(prediction.Label, prediction.Count.ToString());
 					}
 
 					if (_applicationSettings.ImageCameraUpload)
