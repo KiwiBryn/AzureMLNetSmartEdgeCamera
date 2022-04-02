@@ -43,7 +43,7 @@ namespace devMobile.IoT.MachineLearning.YoloV5ObjectDetectionCamera.Model
 
 		public string YoloV5ModelPath { get; set; }
 
-		public double PredicitionScoreThreshold { get; set; }
+		public double PredictionScoreThreshold { get; set; }
 
 #if PREDICTION_CLASSES_OF_INTEREST
 		public List<String> PredictionLabelsOfInterest { get; set; }

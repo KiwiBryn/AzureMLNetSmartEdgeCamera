@@ -190,13 +190,13 @@ using System.Drawing;
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image classes start");
 				foreach (var prediction in predictions)
 				{
-					Console.WriteLine($"  Name:{prediction.Label.Name} Score:{prediction.Score:f2} Valid:{prediction.Score > _applicationSettings.PredicitionScoreThreshold}");
+					Console.WriteLine($"  Name:{prediction.Label.Name} Score:{prediction.Score:f2} Valid:{prediction.Score > _applicationSettings.PredictionScoreThreshold}");
 				}
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image classes done");
 #endif
 
 #if PREDICTION_CLASSES_OF_INTEREST
-				IEnumerable<string> predictionsOfInterest= predictions.Where(p=>p.Score > _applicationSettings.PredicitionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+				IEnumerable<string> predictionsOfInterest= predictions.Where(p=>p.Score > _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
 				if (predictionsOfInterest.Any())
 				{
