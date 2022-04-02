@@ -22,13 +22,14 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_RASPBERRY_PI
 	using System.Diagnostics;
 #endif
+	using System.Globalization;
 	using System.Linq;
 #if CAMERA_SECURITY
 	using System.Net;
+	using System.Text;
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
 	using System.Security.Cryptography;
-	using System.Text;
 #endif
 	using System.Threading;
 	using System.Threading.Tasks;
@@ -42,6 +43,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using Microsoft.Extensions.Hosting;
 	using Microsoft.Extensions.Logging;
 	using Microsoft.Extensions.Options;
+
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
 
 	using Yolov5Net.Scorer;
 	using Yolov5Net.Scorer.Models;
@@ -116,17 +120,13 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if AZURE_IOT_HUB_CONNECTION
 				_deviceClient = await AzureIoTHubConnection();
 #endif
-
 #if AZURE_IOT_HUB_DPS_CONNECTION
 				_deviceClient = await AzureIoTHubDpsConnection();
 #endif
 
 				_logger.LogTrace("YoloV5 model setup start");
-
 				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
-
 				_logger.LogTrace("YoloV5 model setup done");
-
 
 				Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
@@ -188,14 +188,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
 				}
 
-				var predictionsOfInterest = predictions.Where(p => p.Score > _applicationSettings.PredicitionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+				var predictionsOfInterest = predictions.Where(p => p.Score > _applicationSettings.PredicitionScoreThreshold)
+												.Select(c => c.Label.Name)
+												.Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+
 				if (_logger.IsEnabled(LogLevel.Trace))
 				{
 					_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
 				}
 
-				var predictionsTally = predictions.Where(p => p.Score >= _applicationSettings.PredicitionScoreThreshold)
-											.GroupBy(p => p.Label.Name)
+				var predictionsTally = predictionsOfInterest.GroupBy(p => p)
 											.Select(p => new
 											{
 												Label = p.Key,
@@ -205,6 +207,27 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				if (_logger.IsEnabled(LogLevel.Information))
 				{
 					_logger.LogInformation("Predictions tally {0}", predictionsTally.ToList());
+				}
+
+				JObject telemetryDataPoint = new JObject();
+
+				foreach (var predictionTally in predictionsTally)
+				{
+					telemetryDataPoint.Add(predictionTally.Label, predictionTally.Count);
+				}
+
+				try
+				{
+					using (Message message = new Message(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(telemetryDataPoint))))
+					{
+						message.Properties.Add("iothub-creation-time-utc", requestAtUtc.ToString("s", CultureInfo.InvariantCulture));
+
+						await _deviceClient.SendEventAsync(message);
+					}
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync cow counting failed {ex.Message}");
 				}
 			}
 			catch (Exception ex)
