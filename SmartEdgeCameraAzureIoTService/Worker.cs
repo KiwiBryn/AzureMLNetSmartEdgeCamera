@@ -187,7 +187,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 												.Select(c => c.Label.Name)
 												.Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
-				if (predictionsOfInterest.Any())
+				if (predictionsOfInterest.Any() || _applicationSettings.PredictionsNoneStillSend)
 				{
 					if (_logger.IsEnabled(LogLevel.Trace))
 					{

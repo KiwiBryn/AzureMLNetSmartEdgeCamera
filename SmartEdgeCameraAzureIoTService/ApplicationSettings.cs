@@ -33,6 +33,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 		public double PredictionScoreThreshold { get; set; }
 		public List<String> PredictionLabelsOfInterest { get; set; }
+		public bool PredictionsNoneStillSend { get; set; }
 	}
 
 	public class SecurityCameraSettings
