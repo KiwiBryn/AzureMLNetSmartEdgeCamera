@@ -183,15 +183,15 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
 				}
 
-				var predictionsOfInterest = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold)
+				var predictionTriggers = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold)
 												.Select(c => c.Label.Name)
-												.Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+												.Intersect(_applicationSettings.PredictionLabelTriggers, StringComparer.OrdinalIgnoreCase);
 
-				if (predictionsOfInterest.Any() || _applicationSettings.PredictionsNoneStillSend)
+				if (predictionTriggers.Any() || _applicationSettings.PredictionsNoneStillSend)
 				{
 					if (_logger.IsEnabled(LogLevel.Trace))
 					{
-						_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
+						_logger.LogTrace("Predictions triggers {0}", predictionTriggers.ToList());
 					}
 
 					var predictionsTally = predictions.GroupBy(p => p.Label.Name)
