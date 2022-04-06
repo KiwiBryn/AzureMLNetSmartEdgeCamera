@@ -32,8 +32,10 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		public string YoloV5ModelPath { get; set; }
 
 		public double PredictionScoreThreshold { get; set; }
-		public List<String> PredictionLabelTriggers { get; set; }
-		public bool PredictionsNoneStillSend { get; set; }
+
+		public List<String> PredictionLabelsOfInterest { get; set; }
+
+		public List<String> PredictionLabelsMinimum { get; set; }
 	}
 
 	public class SecurityCameraSettings

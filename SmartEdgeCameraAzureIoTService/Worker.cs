@@ -176,6 +176,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					_logger.LogTrace("Prediction start");
 					predictions = _scorer.Predict(image);
 					_logger.LogTrace("Prediction done");
+
+					OutputImageMarkup(image, predictions, _applicationSettings.ImageMarkedUpFilepath);
 				}
 
 				if (_logger.IsEnabled(LogLevel.Trace))
@@ -183,29 +185,40 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
 				}
 
-				var predictionTriggers = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold)
-												.Select(c => c.Label.Name)
-												.Intersect(_applicationSettings.PredictionLabelTriggers, StringComparer.OrdinalIgnoreCase);
+				var predictionsValid = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).Select(p => p.Label.Name);
 
-				if (predictionTriggers.Any() || _applicationSettings.PredictionsNoneStillSend)
+				// Count up the number of each class detected in the image
+				var predictionsTally = predictionsValid.GroupBy(p => p)
+						.Select(p => new
+						{
+							Label = p.Key,
+							Count = p.Count()
+						});
+
+				if (_logger.IsEnabled(LogLevel.Information))
 				{
-					if (_logger.IsEnabled(LogLevel.Trace))
+					_logger.LogInformation("Predictions tally before {0}", predictionsTally.ToList());
+				}
+
+				// Add in any missing counts the cloudy side is expecting
+				if (_applicationSettings.PredictionLabelsMinimum != null)
+				{
+					foreach( String label in _applicationSettings.PredictionLabelsMinimum)
 					{
-						_logger.LogTrace("Predictions triggers {0}", predictionTriggers.ToList());
+						if (!predictionsTally.Any(c=>c.Label == label ))
+						{
+							predictionsTally = predictionsTally.Append(new {Label = label, Count = 0 });
+						}
 					}
+				}
 
-					var predictionsTally = predictions.GroupBy(p => p.Label.Name)
-											.Select(p => new
-											{
-												Label = p.Key,
-												Count = p.Count()
-											});
+				if (_logger.IsEnabled(LogLevel.Information))
+				{
+					_logger.LogInformation("Predictions tally after {0}", predictionsTally.ToList());
+				}
 
-					if (_logger.IsEnabled(LogLevel.Information))
-					{
-						_logger.LogInformation("Predictions tally {0}", predictionsTally.ToList());
-					}
-
+				if ((_applicationSettings.PredictionLabelsOfInterest == null) || (predictionsValid.Select(c => c).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase).Any()))
+				{
 					JObject telemetryDataPoint = new JObject();
 
 					foreach (var predictionTally in predictionsTally)
@@ -223,7 +236,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Camera image download, post processing, telemetry failed");
+				_logger.LogError(ex, "Camera image download, post processing, or telemetry failed");
 			}
 			finally
 			{
@@ -316,7 +329,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 					DeviceRegistrationResult result = await provClient.RegisterAsync();
 
-					_logger.LogInformation("Hub:{0} DeviceID:{1} RegistrationID:{2} Status:{3}",result.AssignedHub, result.DeviceId, result.RegistrationId,result.Status);
+					_logger.LogInformation("Hub:{0} DeviceID:{1} RegistrationID:{2} Status:{3}", result.AssignedHub, result.DeviceId, result.RegistrationId, result.Status);
 					if (result.Status != ProvisioningRegistrationStatusType.Assigned)
 					{
 						_logger.LogTrace("DeviceID:{0} {1} already assigned", result.DeviceId, result.Status);
@@ -335,5 +348,29 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			return deviceClient;
 		}
 #endif
+
+		public void OutputImageMarkup(Image image, List<YoloPrediction> predictions, string filepath)
+		{
+			_logger.LogTrace("Image markup start");
+
+			using (Graphics graphics = Graphics.FromImage(image))
+			{
+
+				foreach (var prediction in predictions) // iterate predictions to draw results
+				{
+					double score = Math.Round(prediction.Score, 2);
+
+					graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
+
+					var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
+
+					graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
+				}
+
+				image.Save(filepath);
+			}
+
+			_logger.LogTrace("Image markup done");
+		}
 	}
 }
