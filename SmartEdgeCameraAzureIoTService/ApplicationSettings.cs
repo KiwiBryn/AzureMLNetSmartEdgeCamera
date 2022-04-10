@@ -36,6 +36,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		public List<String> PredictionLabelsOfInterest { get; set; }
 
 		public List<String> PredictionLabelsMinimum { get; set; }
+
+		public string ImageCameraFilenameFormat { get; set; }
 	}
 
 	public class SecurityCameraSettings

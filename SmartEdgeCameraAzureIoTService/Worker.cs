@@ -23,6 +23,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using System.Diagnostics;
 #endif
 	using System.Globalization;
+#if AZURE_STORAGE_IMAGE_UPLOAD
+	using System.IO;
+#endif
 	using System.Linq;
 #if CAMERA_SECURITY
 	using System.Net;
@@ -34,7 +37,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using System.Threading;
 	using System.Threading.Tasks;
 
+#if AZURE_STORAGE_IMAGE_UPLOAD
+	using Azure;
+	using Azure.Storage.Blobs.Specialized;
+	using Azure.Storage.Blobs.Models;
+#endif
+
 	using Microsoft.Azure.Devices.Client;
+#if AZURE_STORAGE_IMAGE_UPLOAD
+	using Microsoft.Azure.Devices.Client.Transport;
+#endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
 	using Microsoft.Azure.Devices.Shared;
 	using Microsoft.Azure.Devices.Provisioning.Client;
@@ -51,6 +63,12 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using Yolov5Net.Scorer.Models;
 
 	// Compile time options
+	// CAMERA_SECURITY
+	//		or
+	// CAMERA_RASPBERRY_PI
+	//
+	// AZURE_STORAGE_IMAGE_UPLOAD
+	//
 	// AZURE_IOT_HUB_CONNECTION
 	//		or
 	//	AZURE_IOT_HUB_DPS_CONNECTION
@@ -232,6 +250,54 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 						await _deviceClient.SendEventAsync(message);
 					}
+
+#if AZURE_STORAGE_IMAGE_UPLOAD
+					var fileUploadSasUriRequest = new FileUploadSasUriRequest()
+					{
+						BlobName = string.Format(_applicationSettings.ImageCameraFilenameFormat, requestAtUtc),
+					};
+
+					FileUploadSasUriResponse sasUri = await _deviceClient.GetFileUploadSasUriAsync(fileUploadSasUriRequest);
+
+					var blockBlobClient = new BlockBlobClient(sasUri.GetBlobUri());
+
+					var fileUploadCompletionNotification = new FileUploadCompletionNotification()
+					{
+						// Mandatory. Must be the same value as the correlation id returned in the sas uri response
+						CorrelationId = sasUri.CorrelationId,
+
+						IsSuccess = true
+					};
+
+					try
+					{
+						using (FileStream fileStream = File.OpenRead(_applicationSettings.ImageCameraFilepath))
+						{
+							Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream); //, blobUploadOptions);
+
+							fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
+
+							if (fileUploadCompletionNotification.StatusCode != ((int)HttpStatusCode.Created))
+							{
+								fileUploadCompletionNotification.IsSuccess = false;
+
+								fileUploadCompletionNotification.StatusDescription = response.GetRawResponse().ReasonPhrase;
+							}
+						}
+					}
+					catch (RequestFailedException ex)
+					{
+						fileUploadCompletionNotification.StatusCode = ex.Status;
+
+						fileUploadCompletionNotification.IsSuccess = false;
+
+						fileUploadCompletionNotification.StatusDescription = ex.Message;
+					}
+					finally
+					{
+						await _deviceClient.CompleteFileUploadAsync(fileUploadCompletionNotification);
+					}
+#endif
 				}
 			}
 			catch (Exception ex)
