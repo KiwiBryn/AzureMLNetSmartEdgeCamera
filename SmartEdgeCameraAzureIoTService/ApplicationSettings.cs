@@ -29,6 +29,11 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		public string ImageCameraFilepath { get; set; }
 		public string ImageMarkedUpFilepath { get; set; }
 
+#if AZURE_STORAGE_IMAGE_UPLOAD
+		public bool ImageCameraUpload { get; set; }
+		public bool ImageMarkedupUpload { get; set; }
+#endif
+
 		public string YoloV5ModelPath { get; set; }
 
 		public double PredictionScoreThreshold { get; set; }
@@ -36,29 +41,30 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		public List<String> PredictionLabelsOfInterest { get; set; }
 
 		public List<String> PredictionLabelsMinimum { get; set; }
-
-		public string ImageCameraFilenameFormat { get; set; }
 	}
 
+#if CAMERA_SECURITY
 	public class SecurityCameraSettings
 	{
 		public string CameraUrl { get; set; }
 		public string CameraUserName { get; set; }
 		public string CameraUserPassword { get; set; }
 	}
+#endif
 
+#if CAMERA_RASPBERRY_PI
 	public class RaspberryPICameraSettings
 	{
 		public int Rotation { get; set; }
 		public int ProcessWaitForExit { get; set; }
 	}
+#endif
 
 #if AZURE_STORAGE_IMAGE_UPLOAD
 	public class AzureStorageSettings
 	{
-		public string AzureStorageConnectionString { get; set; }
-		public string AzureStorageImageInputFilenameFormat { get; set; }
-		public string AzureStorageImageOutputFilenameFormat { get; set; }
+		public string ImageCameraFilenameFormat { get; set; }
+		public string ImageMarkedUpFilenameFormat { get; set; }
 	}
 #endif
 

@@ -38,6 +38,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_RASPBERRY_PI
 					services.Configure<RaspberryPICameraSettings>(hostContext.Configuration.GetSection("RaspberryPICamera"));
 #endif
+#if AZURE_STORAGE_IMAGE_UPLOAD
+					services.Configure<AzureStorageSettings>(hostContext.Configuration.GetSection("AzureStorage"));
+#endif
 #if AZURE_IOT_HUB_CONNECTION
 					services.Configure<AzureIoTHubSettings>(hostContext.Configuration.GetSection("AzureIoTHub"));
 #endif

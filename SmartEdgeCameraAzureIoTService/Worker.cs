@@ -83,6 +83,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_RASPBERRY_PI
 		private readonly RaspberryPICameraSettings _raspberryPICameraSettings;
 #endif
+#if AZURE_STORAGE_IMAGE_UPLOAD
+		private readonly AzureStorageSettings _azureStorageSettings;
+#endif
 #if AZURE_IOT_HUB_CONNECTION
 		private readonly AzureIoTHubSettings _azureIoTHubSettings;
 #endif
@@ -101,6 +104,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if CAMERA_RASPBERRY_PI
 			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings,
 #endif
+#if AZURE_STORAGE_IMAGE_UPLOAD
+			IOptions<AzureStorageSettings> azureStorageSettings,
+#endif
 #if AZURE_IOT_HUB_CONNECTION
 			IOptions<AzureIoTHubSettings> azureIoTHubSettings
 #endif
@@ -117,6 +123,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #endif
 #if CAMERA_RASPBERRY_PI
 			_raspberryPICameraSettings = raspberryPICameraSettings.Value;
+#endif
+#if AZURE_STORAGE_IMAGE_UPLOAD
+			_azureStorageSettings = azureStorageSettings.Value;
 #endif
 #if AZURE_IOT_HUB_CONNECTION
 			_azureIoTHubSettings = azureIoTHubSettings.Value;
@@ -252,50 +261,22 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 					}
 
 #if AZURE_STORAGE_IMAGE_UPLOAD
-					var fileUploadSasUriRequest = new FileUploadSasUriRequest()
+					if (_applicationSettings.ImageCameraUpload)
 					{
-						BlobName = string.Format(_applicationSettings.ImageCameraFilenameFormat, requestAtUtc),
-					};
+						_logger.LogTrace("Image camera upload start");
 
-					FileUploadSasUriResponse sasUri = await _deviceClient.GetFileUploadSasUriAsync(fileUploadSasUriRequest);
+						await UploadImage(predictions, _applicationSettings.ImageCameraFilepath, string.Format(_azureStorageSettings.ImageCameraFilenameFormat, requestAtUtc));
 
-					var blockBlobClient = new BlockBlobClient(sasUri.GetBlobUri());
-
-					var fileUploadCompletionNotification = new FileUploadCompletionNotification()
-					{
-						// Mandatory. Must be the same value as the correlation id returned in the sas uri response
-						CorrelationId = sasUri.CorrelationId,
-
-						IsSuccess = true
-					};
-
-					try
-					{
-						using (FileStream fileStream = File.OpenRead(_applicationSettings.ImageCameraFilepath))
-						{
-							Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream); //, blobUploadOptions);
-
-							fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
-
-							if (fileUploadCompletionNotification.StatusCode != ((int)HttpStatusCode.Created))
-							{
-								fileUploadCompletionNotification.IsSuccess = false;
-
-								fileUploadCompletionNotification.StatusDescription = response.GetRawResponse().ReasonPhrase;
-							}
-						}
+						_logger.LogTrace("Image camera upload done");
 					}
-					catch (RequestFailedException ex)
-					{
-						fileUploadCompletionNotification.StatusCode = ex.Status;
 
-						fileUploadCompletionNotification.IsSuccess = false;
-
-						fileUploadCompletionNotification.StatusDescription = ex.Message;
-					}
-					finally
+					if (_applicationSettings.ImageMarkedupUpload)
 					{
-						await _deviceClient.CompleteFileUploadAsync(fileUploadCompletionNotification);
+						_logger.LogTrace("Image marked-up upload start");
+
+						await UploadImage(predictions, _applicationSettings.ImageMarkedUpFilepath, string.Format(_azureStorageSettings.ImageMarkedUpFilenameFormat, requestAtUtc));
+
+						_logger.LogTrace("Image marked-up upload done");
 					}
 #endif
 				}
@@ -437,6 +418,55 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			}
 
 			_logger.LogTrace("Image markup done");
+		}
+
+		public async Task UploadImage(List<YoloPrediction> predictions, string filepath, string blobpath)
+		{
+			var fileUploadSasUriRequest = new FileUploadSasUriRequest()
+			{
+				BlobName = blobpath 
+			};
+
+			FileUploadSasUriResponse sasUri = await _deviceClient.GetFileUploadSasUriAsync(fileUploadSasUriRequest);
+
+			var blockBlobClient = new BlockBlobClient(sasUri.GetBlobUri());
+
+			var fileUploadCompletionNotification = new FileUploadCompletionNotification()
+			{
+				// Mandatory. Must be the same value as the correlation id returned in the sas uri response
+				CorrelationId = sasUri.CorrelationId,
+
+				IsSuccess = true
+			};
+
+			try
+			{
+				using (FileStream fileStream = File.OpenRead(filepath))
+				{
+					Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream); //, blobUploadOptions);
+
+					fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
+
+					if (fileUploadCompletionNotification.StatusCode != ((int)HttpStatusCode.Created))
+					{
+						fileUploadCompletionNotification.IsSuccess = false;
+
+						fileUploadCompletionNotification.StatusDescription = response.GetRawResponse().ReasonPhrase;
+					}
+				}
+			}
+			catch (RequestFailedException ex)
+			{
+				fileUploadCompletionNotification.StatusCode = ex.Status;
+
+				fileUploadCompletionNotification.IsSuccess = false;
+
+				fileUploadCompletionNotification.StatusDescription = ex.Message;
+			}
+			finally
+			{
+				await _deviceClient.CompleteFileUploadAsync(fileUploadCompletionNotification);
+			}
 		}
 	}
 }
