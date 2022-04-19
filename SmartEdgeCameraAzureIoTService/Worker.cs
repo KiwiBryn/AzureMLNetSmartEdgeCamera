@@ -34,6 +34,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #if AZURE_IOT_HUB_DPS_CONNECTION
 	using System.Security.Cryptography;
 #endif
+#if AZURE_DEVICE_PROPERTIES
+	using System.Reflection;
+#endif
 	using System.Threading;
 	using System.Threading.Tasks;
 
@@ -48,9 +51,11 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using Microsoft.Azure.Devices.Client.Transport;
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
-	using Microsoft.Azure.Devices.Shared;
 	using Microsoft.Azure.Devices.Provisioning.Client;
 	using Microsoft.Azure.Devices.Provisioning.Client.Transport;
+#endif
+#if AZURE_IOT_HUB_DPS_CONNECTION || AZURE_DEVICE_PROPERTIES
+	using Microsoft.Azure.Devices.Shared;
 #endif
 	using Microsoft.Extensions.Hosting;
 	using Microsoft.Extensions.Logging;
@@ -72,6 +77,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	// AZURE_IOT_HUB_CONNECTION
 	//		or
 	//	AZURE_IOT_HUB_DPS_CONNECTION
+	//
+	// AZURE_DEVICE_PROPERTIES
 
 	public class Worker : BackgroundService
 	{
@@ -146,6 +153,41 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
 				_deviceClient = await AzureIoTHubDpsConnection();
+#endif
+
+#if AZURE_DEVICE_PROPERTIES
+				_logger.LogTrace("ReportedPropeties upload start");
+
+				TwinCollection reportedProperties = new TwinCollection();
+
+				reportedProperties["OSVersion"] = Environment.OSVersion.VersionString;
+				reportedProperties["MachineName"] = Environment.MachineName;
+				reportedProperties["ApplicationVersion"] = Assembly.GetAssembly(typeof(Program)).GetName().Version;
+				reportedProperties["ImageTimerDue"] = _applicationSettings.ImageTimerDue;
+				reportedProperties["ImageTimerPeriod"] = _applicationSettings.ImageTimerPeriod;
+				reportedProperties["YoloV5ModelPath"] = _applicationSettings.YoloV5ModelPath;
+				if (_applicationSettings.PredictionLabelsOfInterest != null)
+				{
+					reportedProperties["PredictionLabelsOfInterest"] = _applicationSettings.PredictionLabelsOfInterest.ToList();
+				}
+				else
+				{
+					reportedProperties["PredictionLabelsOfInterest"] = "";
+				}
+				if (_applicationSettings.PredictionLabelsMinimum != null)
+				{
+					reportedProperties["PredictionLabelsMinimum"] = _applicationSettings.PredictionLabelsMinimum.ToList();
+				}
+				else
+				{
+					reportedProperties["PredictionLabelsMinimum"] = "";
+
+				}
+				reportedProperties["PredictionScoreThreshold"] = _applicationSettings.PredictionScoreThreshold;
+
+				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties, stoppingToken);
+
+				_logger.LogTrace("ReportedPropeties upload done");
 #endif
 
 				_logger.LogTrace("YoloV5 model setup start");
@@ -420,7 +462,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			_logger.LogTrace("Image markup done");
 		}
 
-		public async Task UploadImage(List<YoloPrediction> predictions, string filepath, string blobpath)
+		public static async Task UploadImage(List<YoloPrediction> predictions, string filepath, string blobpath)
 		{
 			var fileUploadSasUriRequest = new FileUploadSasUriRequest()
 			{
@@ -462,6 +504,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				fileUploadCompletionNotification.IsSuccess = false;
 
 				fileUploadCompletionNotification.StatusDescription = ex.Message;
+
+				throw;
 			}
 			finally
 			{

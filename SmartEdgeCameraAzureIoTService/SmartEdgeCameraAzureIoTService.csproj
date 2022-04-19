@@ -4,10 +4,11 @@
     <TargetFramework>net5.0</TargetFramework>
     <UserSecretsId>dotnet-SmartEdgeCameraAzureIoTService-393EE1B8-BA25-4286-94DB-87219E221C79</UserSecretsId>
     <RootNamespace>devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService</RootNamespace>
+    <FileVersion>1.0.1.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE,CAMERA_SECURITY,AZURE_IOT_HUB_DPS_CONNECTION,AZURE_STORAGE_IMAGE_UPLOAD</DefineConstants>
+    <DefineConstants>TRACE,CAMERA_SECURITY,AZURE_IOT_HUB_DPS_CONNECTION,AZURE_STORAGE_IMAGE_UPLOAD,AZURE_DEVICE_PROPERTIES</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -42,4 +43,11 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.11.0" />
     <PackageReference Include="Yolov5Net" Version="1.0.9" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.1.*</AssemblyVersion>
+    <Deterministic>false</Deterministic>
+  </PropertyGroup>
 </Project>
