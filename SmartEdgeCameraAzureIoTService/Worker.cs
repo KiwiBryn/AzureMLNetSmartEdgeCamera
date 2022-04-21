@@ -102,6 +102,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		private static YoloScorer<YoloCocoP5Model> _scorer = null;
 		private bool _cameraBusy = false;
 		private static DeviceClient _deviceClient;
+		private Timer _ImageUpdatetimer;
 
 		public Worker(ILogger<Worker> logger,
 			IOptions<ApplicationSettings> applicationSettings,
@@ -190,11 +191,15 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				_logger.LogTrace("ReportedPropeties upload done");
 #endif
 
+				await _deviceClient.SetMethodHandlerAsync("ImageTimerStart", ImageTimerStartHandler, null);
+
+				await _deviceClient.SetMethodHandlerAsync("ImageTimerStop", ImageTimerStopHandler, null);
+
 				_logger.LogTrace("YoloV5 model setup start");
 				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
 				_logger.LogTrace("YoloV5 model setup done");
 
-				Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+				_ImageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
 				try
 				{
@@ -215,6 +220,24 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			}
 
 			_logger.LogInformation("Azure IoT Smart Edge Camera Service shutdown");
+		}
+
+		private async Task<MethodResponse> ImageTimerStartHandler(MethodRequest methodRequest, object userContext)
+		{
+			_logger.LogInformation("ImageUpdatetimer Start Due:{0} Period:{1}", _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+
+			_ImageUpdatetimer.Change(_applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+
+			return new MethodResponse(200);
+		}
+
+		private async Task<MethodResponse> ImageTimerStopHandler(MethodRequest methodRequest, object userContext)
+		{
+			_logger.LogInformation("ImageUpdatetimer Stop"); 
+			
+			_ImageUpdatetimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+			return new MethodResponse(200);
 		}
 
 		private async void ImageUpdateTimerCallback(object state)
