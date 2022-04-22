@@ -191,15 +191,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				_logger.LogTrace("ReportedPropeties upload done");
 #endif
 
-				await _deviceClient.SetMethodHandlerAsync("ImageTimerStart", ImageTimerStartHandler, null);
-
-				await _deviceClient.SetMethodHandlerAsync("ImageTimerStop", ImageTimerStopHandler, null);
-
 				_logger.LogTrace("YoloV5 model setup start");
 				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
 				_logger.LogTrace("YoloV5 model setup done");
 
 				_ImageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+
+				await _deviceClient.SetMethodHandlerAsync("ImageTimerStart", ImageTimerStartHandler, null);
+				await _deviceClient.SetMethodHandlerAsync("ImageTimerStop", ImageTimerStopHandler, null);
+
+				await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChangedAsync, null);
 
 				try
 				{
@@ -233,11 +234,43 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 		private async Task<MethodResponse> ImageTimerStopHandler(MethodRequest methodRequest, object userContext)
 		{
-			_logger.LogInformation("ImageUpdatetimer Stop"); 
-			
+			_logger.LogInformation("ImageUpdatetimer Stop");
+
 			_ImageUpdatetimer.Change(Timeout.Infinite, Timeout.Infinite);
 
 			return new MethodResponse(200);
+		}
+
+		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
+		{
+			_logger.LogInformation("OnDesiredPropertyChanged timer");
+
+			if (!desiredProperties.Contains("ImageTimerDue") || !desiredProperties.Contains("ImageTimerPeriod"))
+			{
+				_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue or ImageTimerPeriod missing");
+				return;
+			}
+
+			if (!TimeSpan.TryParse(desiredProperties["ImageTimerDue"].Value, out TimeSpan imageTimerDue))
+			{
+				_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue invalid");
+				return;
+			}
+
+			if (!TimeSpan.TryParse(desiredProperties["ImageTimerPeriod"].Value, out TimeSpan imageTimerPeriod))
+			{
+				_logger.LogInformation("OnDesiredPropertyChanged ImageTimerPeriod invalid");
+				return;
+			}
+
+			if (_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod))
+			{
+				_logger.LogInformation("OnDesiredPropertyChanged Timer.Change({0},{1}) success", imageTimerDue, imageTimerPeriod);
+			}
+			else
+			{
+				_logger.LogInformation("OnDesiredPropertyChanged Timer.Change({0},{1}) failure", imageTimerDue, imageTimerPeriod);
+			}
 		}
 
 		private async void ImageUpdateTimerCallback(object state)
