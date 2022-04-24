@@ -215,7 +215,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 			_ImageUpdatetimer.Change(_applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
-			return new MethodResponse(200);
+			return new MethodResponse((short)HttpStatusCode.OK);
 		}
 
 		private async Task<MethodResponse> ImageTimerStopHandler(MethodRequest methodRequest, object userContext)
@@ -224,7 +224,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 			_ImageUpdatetimer.Change(Timeout.Infinite, Timeout.Infinite);
 
-			return new MethodResponse(200);
+			return new MethodResponse((short)HttpStatusCode.OK);
 		}
 
 		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
@@ -280,10 +280,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 				_logger.LogInformation("Desired Due:{0} Period:{1}", imageTimerDue, imageTimerPeriod);
 
-				if ( !_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod))
+				if (!_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod))
 				{
 					_logger.LogInformation("Desired Due:{0} Period:{1} failed", imageTimerDue, imageTimerPeriod);
-
 				}
 
 				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
