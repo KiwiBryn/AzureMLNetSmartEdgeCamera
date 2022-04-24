@@ -167,24 +167,10 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				reportedProperties["ImageTimerDue"] = _applicationSettings.ImageTimerDue;
 				reportedProperties["ImageTimerPeriod"] = _applicationSettings.ImageTimerPeriod;
 				reportedProperties["YoloV5ModelPath"] = _applicationSettings.YoloV5ModelPath;
-				if (_applicationSettings.PredictionLabelsOfInterest != null)
-				{
-					reportedProperties["PredictionLabelsOfInterest"] = _applicationSettings.PredictionLabelsOfInterest.ToList();
-				}
-				else
-				{
-					reportedProperties["PredictionLabelsOfInterest"] = "";
-				}
-				if (_applicationSettings.PredictionLabelsMinimum != null)
-				{
-					reportedProperties["PredictionLabelsMinimum"] = _applicationSettings.PredictionLabelsMinimum.ToList();
-				}
-				else
-				{
-					reportedProperties["PredictionLabelsMinimum"] = "";
 
-				}
 				reportedProperties["PredictionScoreThreshold"] = _applicationSettings.PredictionScoreThreshold;
+				reportedProperties["PredictionLabelsOfInterest"] = _applicationSettings.PredictionLabelsOfInterest;
+				reportedProperties["PredictionLabelsMinimum"] = _applicationSettings.PredictionLabelsMinimum;
 
 				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties, stoppingToken);
 
@@ -243,33 +229,51 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
 		{
-			_logger.LogInformation("OnDesiredPropertyChanged timer");
+			_logger.LogInformation("OnDesiredPropertyChanged handler");
 
-			if (!desiredProperties.Contains("ImageTimerDue") || !desiredProperties.Contains("ImageTimerPeriod"))
-			{
-				_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue or ImageTimerPeriod missing");
-				return;
-			}
+			// NB- This approach does not save the ImageTimerDue or ImageTimerPeriod, a stop/start with return to appsettings.json configuration values
 
-			if (!TimeSpan.TryParse(desiredProperties["ImageTimerDue"].Value, out TimeSpan imageTimerDue))
+			try
 			{
-				_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue invalid");
-				return;
-			}
+				// Check to see if either of ImageTimerDue or ImageTimerPeriod has changed
+				if (!desiredProperties.Contains("ImageTimerDue") && !desiredProperties.Contains("ImageTimerPeriod"))
+				{
+					_logger.LogInformation("OnDesiredPropertyChanged neither ImageTimerDue or ImageTimerPeriod present");
+					return;
+				}
 
-			if (!TimeSpan.TryParse(desiredProperties["ImageTimerPeriod"].Value, out TimeSpan imageTimerPeriod))
-			{
-				_logger.LogInformation("OnDesiredPropertyChanged ImageTimerPeriod invalid");
-				return;
-			}
+				TimeSpan imageTimerDue = _applicationSettings.ImageTimerDue;
 
-			if (_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod))
-			{
-				_logger.LogInformation("OnDesiredPropertyChanged Timer.Change({0},{1}) success", imageTimerDue, imageTimerPeriod);
+				// Check that format of ImageTimerDue valid if present
+				if (desiredProperties.Contains("ImageTimerDue") && !TimeSpan.TryParse(desiredProperties["ImageTimerDue"].Value, out imageTimerDue))
+				{
+					_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue invalid");
+					return;
+				}
+
+				TimeSpan imageTimerPeriod = _applicationSettings.ImageTimerPeriod;
+
+				// Check that format of ImageTimerPeriod valid if present
+				if (desiredProperties.Contains("ImageTimerPeriod") && !TimeSpan.TryParse(desiredProperties["ImageTimerPeriod"].Value, out imageTimerPeriod))
+				{
+					_logger.LogInformation("OnDesiredPropertyChanged ImageTimerPeriod invalid");
+					return;
+				}
+
+				_logger.LogInformation("Desired Due:{0} Period:{1}", imageTimerDue, imageTimerPeriod);
+
+				_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod);
+
+				TwinCollection reportedProperties = new TwinCollection();
+
+				reportedProperties["ImageTimerDue"] = imageTimerDue;
+				reportedProperties["ImageTimerPeriod"] = imageTimerPeriod;
+
+				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
 			}
-			else
+			catch (Exception ex)
 			{
-				_logger.LogInformation("OnDesiredPropertyChanged Timer.Change({0},{1}) failure", imageTimerDue, imageTimerPeriod);
+				_logger.LogError(ex, "OnDesiredPropertyChangedAsync handler failed");
 			}
 		}
 
