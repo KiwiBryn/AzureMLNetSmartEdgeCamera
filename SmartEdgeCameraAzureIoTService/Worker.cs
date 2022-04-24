@@ -185,6 +185,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 				await _deviceClient.SetMethodHandlerAsync("ImageTimerStart", ImageTimerStartHandler, null);
 				await _deviceClient.SetMethodHandlerAsync("ImageTimerStop", ImageTimerStopHandler, null);
+				await _deviceClient.SetMethodDefaultHandlerAsync(DefaultHandler, null);
 
 				await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChangedAsync, null);
 
@@ -211,7 +212,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 		private async Task<MethodResponse> ImageTimerStartHandler(MethodRequest methodRequest, object userContext)
 		{
-			_logger.LogInformation("ImageUpdatetimer Start Due:{0} Period:{1}", _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+			_logger.LogInformation("Direct Method Image Timer Start Due:{0} Period:{1}", _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
 			_ImageUpdatetimer.Change(_applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
@@ -220,11 +221,18 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 		private async Task<MethodResponse> ImageTimerStopHandler(MethodRequest methodRequest, object userContext)
 		{
-			_logger.LogInformation("ImageUpdatetimer Stop");
+			_logger.LogInformation("Direct method Image Timer Stop");
 
 			_ImageUpdatetimer.Change(Timeout.Infinite, Timeout.Infinite);
 
 			return new MethodResponse((short)HttpStatusCode.OK);
+		}
+
+		private async Task<MethodResponse> DefaultHandler(MethodRequest methodRequest, object userContext)
+		{
+			_logger.LogInformation("Direct Method default handler Name:{0}", methodRequest.Name);
+
+			return new MethodResponse((short)HttpStatusCode.NotImplemented);
 		}
 
 		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
