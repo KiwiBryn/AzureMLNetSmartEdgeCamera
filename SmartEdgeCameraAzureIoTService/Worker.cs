@@ -229,9 +229,13 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
 		{
+			TwinCollection reportedProperties = new TwinCollection();
+
 			_logger.LogInformation("OnDesiredPropertyChanged handler");
 
-			// NB- This approach does not save the ImageTimerDue or ImageTimerPeriod, a stop/start with return to appsettings.json configuration values
+			// NB- This approach does not save the ImageTimerDue or ImageTimerPeriod, a stop/start with return to appsettings.json configuration values. If only
+			// one parameter specified other is default from appsettings.json. If timer settings changed I think they won't take
+			// effect until next time Timer fires.
 
 			try
 			{
@@ -245,29 +249,42 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				TimeSpan imageTimerDue = _applicationSettings.ImageTimerDue;
 
 				// Check that format of ImageTimerDue valid if present
-				if (desiredProperties.Contains("ImageTimerDue") && !TimeSpan.TryParse(desiredProperties["ImageTimerDue"].Value, out imageTimerDue))
+				if (desiredProperties.Contains("ImageTimerDue"))
 				{
-					_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue invalid");
-					return;
+					if (TimeSpan.TryParse(desiredProperties["ImageTimerDue"].Value, out imageTimerDue))
+					{
+						reportedProperties["ImageTimerDue"] = imageTimerDue;
+					}
+					else
+					{
+						_logger.LogInformation("OnDesiredPropertyChanged ImageTimerDue invalid");
+						return;
+					}
 				}
 
 				TimeSpan imageTimerPeriod = _applicationSettings.ImageTimerPeriod;
 
 				// Check that format of ImageTimerPeriod valid if present
-				if (desiredProperties.Contains("ImageTimerPeriod") && !TimeSpan.TryParse(desiredProperties["ImageTimerPeriod"].Value, out imageTimerPeriod))
+				if (desiredProperties.Contains("ImageTimerPeriod"))
 				{
-					_logger.LogInformation("OnDesiredPropertyChanged ImageTimerPeriod invalid");
-					return;
+					if (TimeSpan.TryParse(desiredProperties["ImageTimerPeriod"].Value, out imageTimerPeriod))
+					{
+						reportedProperties["ImageTimerPeriod"] = imageTimerPeriod;
+					}
+					else
+					{
+						_logger.LogInformation("OnDesiredPropertyChanged ImageTimerPeriod invalid");
+						return;
+					}
 				}
 
 				_logger.LogInformation("Desired Due:{0} Period:{1}", imageTimerDue, imageTimerPeriod);
 
-				_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod);
+				if ( !_ImageUpdatetimer.Change(imageTimerDue, imageTimerPeriod))
+				{
+					_logger.LogInformation("Desired Due:{0} Period:{1} failed", imageTimerDue, imageTimerPeriod);
 
-				TwinCollection reportedProperties = new TwinCollection();
-
-				reportedProperties["ImageTimerDue"] = imageTimerDue;
-				reportedProperties["ImageTimerPeriod"] = imageTimerPeriod;
+				}
 
 				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
 			}
