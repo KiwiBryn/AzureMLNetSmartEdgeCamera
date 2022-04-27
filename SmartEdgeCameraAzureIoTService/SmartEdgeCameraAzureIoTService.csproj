@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE,CAMERA_SECURITY,AZURE_IOT_HUB_DPS_CONNECTION,AZURE_STORAGE_IMAGE_UPLOAD,AZURE_DEVICE_PROPERTIES</DefineConstants>
+    <DefineConstants>TRACE,CAMERA_SECURITY,AZURE_IOT_HUB_CONNECTION,AZURE_STORAGE_IMAGE_UPLOAD,AZURE_DEVICE_PROPERTIES</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -46,8 +46,15 @@
 
   <PropertyGroup>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <AssemblyVersion>1.0.1.*</AssemblyVersion>
     <Deterministic>false</Deterministic>
+    <Authors>Bryn Lewis @KiwiBryn</Authors>
+    <Company>devMobile Software</Company>
+    <Copyright>devMobile Software, Apache License, Version 2.0</Copyright>
+    <RepositoryUrl>https://github.com/KiwiBryn/AzureMLNetSmartEdgeCamera</RepositoryUrl>
+    <PackageTags>Yolo, YoloV5, Azure IoT Hubs, Azure Azure IoT Central, device properties, Device Twin</PackageTags>
+    <Product>devMobile Smart Edge Camera AzureIoT Service</Product>
+    <Description>Windows service/Unix daemon which uses a Security Camera or RaspberrtPI V2 camera to take pictures. The images are then procesed with a YoloV5 model to identify "objects of interest". If there are any "objects of interest" telemetry is uploaded to an Azure IoT Hub. Optionally the raw camera image and/or the marked up image are uploaded to the Azure Storage associated with the Azure IoT Hub.</Description>
   </PropertyGroup>
 </Project>
