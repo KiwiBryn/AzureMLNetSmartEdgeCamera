@@ -46,11 +46,7 @@ namespace devMobile.IoT.MachineLearning.SecurityCameraImageTimer
 
                 _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
 
-                NetworkCredential networkCredential = new NetworkCredential()
-                {
-                    UserName = _applicationSettings.CameraUserName,
-                    Password = _applicationSettings.CameraUserPassword,
-                };
+                NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
 
                 _httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
 
