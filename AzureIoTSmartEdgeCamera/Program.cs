@@ -27,7 +27,9 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 	using System.Drawing;
 	using System.Globalization;
 #if SECURITY_CAMERA
+	using System.IO;
 	using System.Net;
+	using System.Net.Http;
 #endif
 #if PREDICTION_CLASSES || PREDICTION_CLASSES_OF_INTEREST
 	using System.Linq;
@@ -77,6 +79,9 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 	{
 		private static Model.ApplicationSettings _applicationSettings;
 		private static bool _cameraBusy = false;
+#if SECURITY_CAMERA
+		private static HttpClient _httpClient;
+#endif
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
 		private static DeviceClient _deviceClient;
 #endif
@@ -134,6 +139,12 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 					 .Build();
 
 				_applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
+
+#if SECURITY_CAMERA
+				NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword)
+
+				_httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
+#endif
 
 #if AZURE_IOT_HUB_CONNECTION
 				_deviceClient = await AzureIoTHubConnection();
@@ -302,21 +313,14 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 		}
 
 #if SECURITY_CAMERA
-		private static void SecurityCameraImageCapture()
+		private static async void SecurityCameraImageCapture()
 		{
 			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
 
-			NetworkCredential networkCredential = new NetworkCredential()
+			using (Stream cameraStream = await _httpClient.GetStreamAsync(_applicationSettings.CameraUrl))
+			using (Stream fileStream = File.Create(_applicationSettings.ImageInputFilenameLocal))
 			{
-				UserName = _applicationSettings.CameraUserName,
-				Password = _applicationSettings.CameraUserPassword,
-			};
-
-			using (WebClient client = new WebClient())
-			{
-				client.Credentials = networkCredential;
-
-				client.DownloadFile(_applicationSettings.CameraUrl, _applicationSettings.ImageInputFilenameLocal);
+				await cameraStream.CopyToAsync(fileStream);
 			}
 
 			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
