@@ -15,7 +15,9 @@
 //
 //---------------------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,81 +26,83 @@ using Microsoft.Extensions.Configuration;
 
 namespace devMobile.IoT.MachineLearning.SecurityCameraImageTimer
 {
-	class Program
-	{
-		private static Model.ApplicationSettings _applicationSettings;
-		private static bool _cameraBusy = false;
+    class Program
+    {
+        private static Model.ApplicationSettings _applicationSettings;
+        private static bool _cameraBusy = false;
+        private static HttpClient _httpClient;
 
-		static async Task Main(string[] args)
-		{
-			Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} SecurityCameraImage starting");
+        static async Task Main(string[] args)
+        {
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} SecurityCameraImage starting");
 
-			try
-			{
-				// load the app settings into configuration
-				var configuration = new ConfigurationBuilder()
-					 .AddJsonFile("appsettings.json", false, true)
-					 .AddUserSecrets<Program>()
-					 .Build();
+            try
+            {
+                // load the app settings into configuration
+                var configuration = new ConfigurationBuilder()
+                     .AddJsonFile("appsettings.json", false, true)
+                     .AddUserSecrets<Program>()
+                     .Build();
 
-				_applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
+                _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
 
-				Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+                NetworkCredential networkCredential = new NetworkCredential()
+                {
+                    UserName = _applicationSettings.CameraUserName,
+                    Password = _applicationSettings.CameraUserPassword,
+                };
 
-				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} press <ctrl^c> to exit");
+                _httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
 
-				try
-				{
-					await Task.Delay(Timeout.Infinite);
-				}
-				catch (TaskCanceledException)
-				{
-					Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown requested");
+                Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown failure {ex.Message}", ex);
-			}
-		}
+                Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} press <ctrl^c> to exit");
 
-		private static void ImageUpdateTimerCallback(object state)
-		{
-			// Just incase - stop code being called while photo already in progress
-			if (_cameraBusy)
-			{
-				return;
-			}
-			_cameraBusy = true;
+                try
+                {
+                    await Task.Delay(Timeout.Infinite);
+                }
+                catch (TaskCanceledException)
+                {
+                    Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown requested");
 
-			try
-			{
-				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss.fff} Security Camera Image download start");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown failure {ex.Message}", ex);
+            }
+        }
 
-				NetworkCredential networkCredential = new NetworkCredential()
-				{
-					UserName = _applicationSettings.CameraUserName,
-					Password = _applicationSettings.CameraUserPassword,
-				};
+        private static async void ImageUpdateTimerCallback(object state)
+        {
+            // Just incase - stop code being called while photo already in progress
+            if (_cameraBusy)
+            {
+                return;
+            }
+            _cameraBusy = true;
 
-				using (WebClient client = new WebClient())
-				{
-					client.Credentials = networkCredential;
+            try
+            {
+                Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss.fff} Security Camera Image download start");
 
-					client.DownloadFile(_applicationSettings.CameraUrl, _applicationSettings.ImageFilepathLocal);
-				}
+                using (Stream cameraStream = await _httpClient.GetStreamAsync(_applicationSettings.CameraUrl))
+                using (Stream fileStream = File.Create(_applicationSettings.ImageFilepathLocal))
+                {
+                    await cameraStream.CopyToAsync(fileStream);
+                }
 
-				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Security camera image download failed {ex.Message}");
-			}
-			finally
-			{
-				_cameraBusy = false;
-			}
-		}
-	}
+                Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Security camera image download failed {ex.Message}");
+            }
+            finally
+            {
+                _cameraBusy = false;
+            }
+        }
+    }
 }
