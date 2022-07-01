@@ -32,7 +32,9 @@ namespace devMobile.IoT.MachineLearning.YoloV5ObjectDetectionCamera
 #endif
 using System.Drawing;
 #if SECURITY_CAMERA
+	using System.IO;
 	using System.Net;
+	using System.Net.Http;
 #endif
 #if PREDICTION_CLASSES || PREDICTION_CLASSES_OF_INTEREST
 	using System.Linq;
@@ -45,10 +47,13 @@ using System.Drawing;
 	using Yolov5Net.Scorer;
 	using Yolov5Net.Scorer.Models;
 
-	class Program
+    class Program
 	{
 		private static Model.ApplicationSettings _applicationSettings;
 		private static bool _cameraBusy = false;
+#if SECURITY_CAMERA
+		private static HttpClient _httpClient;
+#endif
 		private static YoloScorer<YoloCocoP5Model> _scorer = null;
 #if GPIO_SUPPORT
 		private static GpioController _gpiocontroller;
@@ -67,6 +72,12 @@ using System.Drawing;
 					 .Build();
 
 				_applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
+
+#if SECURITY_CAMERA
+				NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
+
+				_httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
+#endif
 
 #if GPIO_SUPPORT
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} GPIO setup start");
@@ -101,7 +112,7 @@ using System.Drawing;
 			}
 		}
 
-		private static void ImageUpdateTimerCallback(object state)
+		private static async void ImageUpdateTimerCallback(object state)
 		{
 			DateTime requestAtUtc = DateTime.UtcNow;
 
@@ -119,18 +130,12 @@ using System.Drawing;
 #if SECURITY_CAMERA
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
 
-				NetworkCredential networkCredential = new NetworkCredential()
+				using (Stream cameraStream = await _httpClient.GetStreamAsync(_applicationSettings.CameraUrl))
+				using (Stream fileStream = File.Create(_applicationSettings.ImageInputFilenameLocal))
 				{
-					UserName = _applicationSettings.CameraUserName,
-					Password = _applicationSettings.CameraUserPassword,
-				};
-
-				using (WebClient client = new WebClient())
-				{
-					client.Credentials = networkCredential;
-
-					client.DownloadFile(_applicationSettings.CameraUrl, _applicationSettings.ImageInputFilenameLocal);
+					await cameraStream.CopyToAsync(fileStream);
 				}
+
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
 #endif
 
