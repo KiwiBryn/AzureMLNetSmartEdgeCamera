@@ -19,12 +19,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 	using System;
 	using System.Collections.Generic;
 	using System.Drawing;
+#if CAMERA_SECURITY
+	using System.IO;
+#endif
 #if CAMERA_RASPBERRY_PI
 	using System.Diagnostics;
 #endif
 	using System.Linq;
 #if CAMERA_SECURITY
 	using System.Net;
+	using System.Net.Http;
 #endif
 	using System.Threading;
 	using System.Threading.Tasks;
@@ -45,6 +49,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 		private readonly ApplicationSettings _applicationSettings;
 #if CAMERA_SECURITY
 		private readonly SecurityCameraSettings _securityCameraSettings;
+		private HttpClient _httpClient;
 #endif
 #if CAMERA_RASPBERRY_PI
 		private readonly RaspberryPICameraSettings _raspberryPICameraSettings;
@@ -85,6 +90,12 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 
 			try
 			{
+#if CAMERA_SECURITY
+				NetworkCredential networkCredential = new NetworkCredential(_securityCameraSettings.CameraUserName, _securityCameraSettings.CameraUserPassword);
+
+				_httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
+#endif
+
 				_logger.LogInformation("Azure Storage initialisation start");
 				_imageBlobServiceClient = new BlobServiceClient(_azureStorageSettings.ConnectionString);
 				_imagecontainerClient = _imageBlobServiceClient.GetBlobContainerClient(_applicationSettings.DeviceId.ToLower());
@@ -137,7 +148,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 				RaspberryPIImageCapture();
 #endif
 #if CAMERA_SECURITY
-				SecurityCameraImageCapture();
+				await SecurityCameraImageCapture();
 #endif
 				List<YoloPrediction> predictions;
 
@@ -224,21 +235,14 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 		}
 
 #if CAMERA_SECURITY
-		private void SecurityCameraImageCapture()
+		private async Task SecurityCameraImageCapture()
 		{
 			_logger.LogTrace("Security Camera Image download start");
 
-			NetworkCredential networkCredential = new NetworkCredential()
+			using (Stream cameraStream = await _httpClient.GetStreamAsync(_securityCameraSettings.CameraUrl))
+			using (Stream fileStream = File.Create(_applicationSettings.ImageCameraFilepath))
 			{
-				UserName = _securityCameraSettings.CameraUserName,
-				Password = _securityCameraSettings.CameraUserPassword,
-			};
-
-			using (WebClient client = new WebClient())
-			{
-				client.Credentials = networkCredential;
-
-				client.DownloadFile(_securityCameraSettings.CameraUrl, _applicationSettings.ImageCameraFilepath);
+				await cameraStream.CopyToAsync(fileStream);
 			}
 
 			_logger.LogTrace("Security Camera Image download done");
