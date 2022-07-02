@@ -141,7 +141,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 				_applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
 
 #if SECURITY_CAMERA
-				NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword)
+				NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
 
 				_httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
 #endif
