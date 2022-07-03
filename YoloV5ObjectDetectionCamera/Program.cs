@@ -19,6 +19,11 @@
 //    package: 'System.Drawing.Common', version: '5.0.3'
 //
 //		sudo apt-get install libgdiplus
+//
+//	cd YoloV5ObjectDetectionCamera
+//
+//	dotnet YoloV5ObjectDetectionCamera.dll
+//
 //---------------------------------------------------------------------------------
 namespace devMobile.IoT.MachineLearning.YoloV5ObjectDetectionCamera
 {
