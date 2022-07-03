@@ -29,6 +29,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using System.Linq;
 #if CAMERA_SECURITY
 	using System.Net;
+	using System.Net.Http;
 	using System.Text;
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
@@ -86,6 +87,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		private readonly ApplicationSettings _applicationSettings;
 #if CAMERA_SECURITY
 		private readonly SecurityCameraSettings _securityCameraSettings;
+		private HttpClient _httpClient;
 #endif
 #if CAMERA_RASPBERRY_PI
 		private readonly RaspberryPICameraSettings _raspberryPICameraSettings;
@@ -149,6 +151,12 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 			try
 			{
+#if CAMERA_SECURITY
+				NetworkCredential networkCredential = new NetworkCredential(_securityCameraSettings.CameraUserName, _securityCameraSettings.CameraUserPassword);
+
+				_httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
+#endif
+
 #if AZURE_IOT_HUB_CONNECTION
 				_deviceClient = await AzureIoTHubConnection();
 #endif
@@ -320,7 +328,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				RaspberryPIImageCapture();
 #endif
 #if CAMERA_SECURITY
-				SecurityCameraImageCapture();
+				await SecurityCameraImageCapture();
 #endif
 				List<YoloPrediction> predictions;
 
@@ -422,21 +430,14 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		}
 
 #if CAMERA_SECURITY
-		private void SecurityCameraImageCapture()
+		private async Task SecurityCameraImageCapture()
 		{
 			_logger.LogTrace("Security Camera Image download start");
 
-			NetworkCredential networkCredential = new NetworkCredential()
+			using (Stream cameraStream = await _httpClient.GetStreamAsync(_securityCameraSettings.CameraUrl))
+			using (Stream fileStream = File.Create(_applicationSettings.ImageCameraFilepath))
 			{
-				UserName = _securityCameraSettings.CameraUserName,
-				Password = _securityCameraSettings.CameraUserPassword,
-			};
-
-			using (WebClient client = new WebClient())
-			{
-				client.Credentials = networkCredential;
-
-				client.DownloadFile(_securityCameraSettings.CameraUrl, _applicationSettings.ImageCameraFilepath);
+				await cameraStream.CopyToAsync(fileStream);
 			}
 
 			_logger.LogTrace("Security Camera Image download done");
