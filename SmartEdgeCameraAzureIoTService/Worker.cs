@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//	cd SmartEdgeCameraAzureIoTService
+//
+//	dotnet SmartEdgeCameraAzureIoTService.dll
+//
 //---------------------------------------------------------------------------------
 namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 {
@@ -195,8 +199,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				await _deviceClient.SetMethodHandlerAsync("ImageTimerStop", ImageTimerStopHandler, null);
 				await _deviceClient.SetMethodDefaultHandlerAsync(DefaultHandler, null);
 
+#if AZURE_DEVICE_PROPERTIES
 				await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChangedAsync, null);
-
+#endif
 				try
 				{
 					await Task.Delay(Timeout.Infinite, stoppingToken);
