@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <UserSecretsId>dotnet-SmartEdgeCameraAzureIoTService-393EE1B8-BA25-4286-94DB-87219E221C79</UserSecretsId>
     <RootNamespace>devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService</RootNamespace>
-    <FileVersion>1.0.1.0</FileVersion>
+    <FileVersion>1.2.0.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants>$(DefineConstants)TRACE,CAMERA_SECURITY</DefineConstants>
+    <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,20 +34,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
-    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.41.0" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.1" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.41.2" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.2" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="6.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.11.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.12.1" />
     <PackageReference Include="Yolov5Net" Version="1.0.9" />
   </ItemGroup>
 
   <PropertyGroup>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.*</AssemblyVersion>
+    <Version>2.0.0</Version>
+    <AssemblyVersion>1.2.0.*</AssemblyVersion>
     <Deterministic>false</Deterministic>
     <Authors>Bryn Lewis @KiwiBryn</Authors>
     <Company>devMobile Software</Company>

@@ -29,10 +29,24 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="6.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.11.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.12.0" />
     <PackageReference Include="Yolov5Net" Version="1.0.9" />
   </ItemGroup>
+	
+	<PropertyGroup>
+		<ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+		<Version>1.2.0</Version>
+		<AssemblyVersion>1.2.0.*</AssemblyVersion>
+		<Deterministic>false</Deterministic>
+		<Authors>Bryn Lewis @KiwiBryn</Authors>
+		<Company>devMobile Software</Company>
+		<Copyright>devMobile Software, Apache License, Version 2.0</Copyright>
+		<RepositoryUrl>https://github.com/KiwiBryn/AzureMLNetSmartEdgeCamera</RepositoryUrl>
+		<PackageTags>Yolo, YoloV5, Azure Storage, Azure Storage Container, </PackageTags>
+		<Product>devMobile Smart Edge Camera AzureIoT Service</Product>
+		<Description>Windows service/Unix daemon which uses a Security Camera or RaspberrtPI V2 camera to take pictures. The images are then procesed with a YoloV5 model to identify "objects of interest". If there are any "objects of interest" telemetry is uploaded to an Azure IoT Hub. Optionally the raw camera image and/or the marked up image are uploaded to an Azure Storage account container.</Description>
+	</PropertyGroup>	
 </Project>

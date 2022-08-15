@@ -34,7 +34,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.11.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.12.0" />
     <PackageReference Include="System.Device.Gpio" Version="2.1.0" />
     <PackageReference Include="Yolov5Net" Version="1.0.9" />
   </ItemGroup>
