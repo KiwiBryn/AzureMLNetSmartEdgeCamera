@@ -28,8 +28,10 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 
 		public string ImageCameraFilepath { get; set; }
 		public string ImageMarkedUpFilepath { get; set; }
+        public string ImageMarkUpFontPath { get; set; }
+        public int ImageMarkUpFontSize { get; set; }
 
-		public bool ImageCameraUpload { get; set; }
+        public bool ImageCameraUpload { get; set; }
 		public bool ImageMarkedupUpload { get; set; }
 
 		public string YoloV5ModelPath { get; set; }
