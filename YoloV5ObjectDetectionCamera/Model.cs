@@ -38,7 +38,10 @@ namespace devMobile.IoT.MachineLearning.YoloV5ObjectDetectionCamera.Model
 		public int ProcessWaitForExit { get; set; }
 #endif
 
-		public string ImageInputFilenameLocal { get; set; }
+      public string ImageOutputMarkupFontPath { get; set; }
+      public int ImageOutputMarkupFontSize { get; set; }
+
+      public string ImageInputFilenameLocal { get; set; }
 		public string ImageOutputFilenameLocal { get; set; }
 
 		public string YoloV5ModelPath { get; set; }
