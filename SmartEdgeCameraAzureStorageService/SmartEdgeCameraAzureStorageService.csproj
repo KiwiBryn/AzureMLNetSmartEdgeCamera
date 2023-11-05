@@ -29,11 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.18.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="6.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.14.1" />
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta15" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.16.1" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.0.0" />
     <PackageReference Include="Yolov5Net" Version="1.1.0" />
   </ItemGroup>
 	
