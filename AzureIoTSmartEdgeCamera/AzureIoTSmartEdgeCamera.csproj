@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE;SECURITY_CAMERA,AZURE_IOT_HUB_DPS_CONNECTION,PREDICTION_CLASSES,OUTPUT_IMAGE_MARKUP,PREDICTION_CLASSES_OF_INTEREST,AZURE_STORAGE_IMAGE_UPLOAD</DefineConstants>
+    <DefineConstants>$(DefineConstants);AZURE_IOT_HUB_CONNECTION;CAMERA_SECURITY;OUTPUT_IMAGE_MARKUP;SECURITY_CAMERA</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -38,19 +38,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
-    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.41.2" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.2" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.4" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.18.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.42.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.3" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.12.1" />
-    <PackageReference Include="System.Device.Gpio" Version="2.1.0" />
-    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.16.1" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.0.1" />
+    <PackageReference Include="System.Device.Gpio" Version="3.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
     <PackageReference Include="System.IO.Packaging" Version="6.0.0" />
-    <PackageReference Include="Yolov5Net" Version="1.0.9" />
+    <PackageReference Include="Yolov5Net" Version="1.1.0" />
   </ItemGroup>
 
 </Project>
