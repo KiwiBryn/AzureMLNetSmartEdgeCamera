@@ -16,134 +16,138 @@
 //---------------------------------------------------------------------------------
 namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 {
-	using System;
-	using System.Collections.Generic;
+   using System;
+   using System.Collections.Generic;
 #if GPIO_SUPPORT
 	using System.Device.Gpio;
 #endif
 #if RASPBERRY_PI_CAMERA
 	using System.Diagnostics;
 #endif
-	using System.Drawing;
-	using System.Globalization;
+   using System.Globalization;
 #if SECURITY_CAMERA
-	using System.IO;
-	using System.Net;
-	using System.Net.Http;
+   using System.IO;
+   using System.Net;
+   using System.Net.Http;
 #endif
-#if PREDICTION_CLASSES || PREDICTION_CLASSES_OF_INTEREST
-	using System.Linq;
-#endif
+   using System.Linq;
 #if AZURE_DEVICE_TWIN
 	using System.Reflection;
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
-	using System.Security.Cryptography;
+   using System.Security.Cryptography;
 #endif
-	using System.Text;
-	using System.Threading;
-	using System.Threading.Tasks;
+   using System.Text;
+   using System.Threading;
+   using System.Threading.Tasks;
 
 #if AZURE_STORAGE_IMAGE_UPLOAD
-	using Azure.Storage.Blobs;
+   using Azure.Storage.Blobs;
 #endif
 
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
-	using Microsoft.Azure.Devices.Client;
+   using Microsoft.Azure.Devices.Client;
 #endif
 #if AZURE_DEVICE_TWIN
 	using Microsoft.Azure.Devices.Shared;
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
-	using Microsoft.Azure.Devices.Shared;
-	using Microsoft.Azure.Devices.Provisioning.Client;
-	using Microsoft.Azure.Devices.Provisioning.Client.Transport;
+   using Microsoft.Azure.Devices.Shared;
+   using Microsoft.Azure.Devices.Provisioning.Client;
+   using Microsoft.Azure.Devices.Provisioning.Client.Transport;
 #endif
-	using Microsoft.Extensions.Configuration;
+   using Microsoft.Extensions.Configuration;
 
-	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
+   using Newtonsoft.Json;
+   using Newtonsoft.Json.Linq;
 
-	using Yolov5Net.Scorer;
-	using Yolov5Net.Scorer.Models;
+   using SixLabors.ImageSharp.PixelFormats;
+   using SixLabors.ImageSharp;
+   using SixLabors.ImageSharp.Processing;
+   using SixLabors.ImageSharp.Drawing.Processing;
+   using SixLabors.Fonts;
 
-	// Compile time options
-	// GPIO_SUPPORT
-	// PREDICTION_CLASSES
-	// OUTPUT_IMAGE_MARKUP
-	// PREDICTION_CLASSES_OF_INTEREST
-	// AZURE_IOT_HUB_CONNECTION or AZURE_IOT_HUB_DPS_CONNECTION both would be bad
-	// AZURE_STORAGE_IMAGE_UPLOAD
+   using Yolov5Net.Scorer;
+   using Yolov5Net.Scorer.Models;
 
-	class Program
-	{
-		private static Model.ApplicationSettings _applicationSettings;
-		private static bool _cameraBusy = false;
+   // Compile time options
+   // GPIO_SUPPORT
+   // RASPBERRY_PI_CAMERA or SECURITY_CAMERA both would be bad
+   // PREDICTION_CLASSES
+   // OUTPUT_IMAGE_MARKUP
+   // PREDICTION_CLASSES_OF_INTEREST
+   // AZURE_IOT_HUB_CONNECTION or AZURE_IOT_HUB_DPS_CONNECTION both would be bad
+   // AZURE_STORAGE_IMAGE_UPLOAD
+
+   class Program
+   {
+      private static Model.ApplicationSettings _applicationSettings;
+      private static bool _cameraBusy = false;
 #if SECURITY_CAMERA
-		private static HttpClient _httpClient;
+      private static HttpClient _httpClient;
 #endif
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
-		private static DeviceClient _deviceClient;
+      private static DeviceClient _deviceClient;
 #endif
-		private static YoloScorer<YoloCocoP5Model> _scorer = null;
+      private static YoloScorer<YoloCocoP5Model> _scorer = null;
 #if GPIO_SUPPORT
 		private static GpioController _gpiocontroller;
 #endif
 
-		static async Task Main(string[] args)
-		{
-			Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoT Smart Edge Camera starting");
+      static async Task Main(string[] args)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoT Smart Edge Camera starting");
 #if GPIO_SUPPORT
 			Console.WriteLine(" GPIO support enabled");
 #else
-			Console.WriteLine(" GPIO support disabled");
+         Console.WriteLine(" GPIO support disabled");
 #endif
 #if PREDICTION_CLASSES
-			Console.WriteLine(" Prediction classes display support enabled");
+         Console.WriteLine(" Prediction classes display support enabled");
 #else
 			Console.WriteLine(" Prediction classes display support disabled");
 #endif
 #if OUTPUT_IMAGE_MARKUP
-			Console.WriteLine(" Output image prediction markup support enabled");
+         Console.WriteLine(" Output image prediction markup support enabled");
 #else
 			Console.WriteLine(" Output image prediction markup support disabled");
 #endif
 #if PREDICTION_CLASSES_OF_INTEREST
-			Console.WriteLine(" Prediction classes of interest support enabled");
+         Console.WriteLine(" Prediction classes of interest support enabled");
 #else
 			Console.WriteLine(" Prediction classes of interest support disabled");
 #endif
 #if AZURE_IOT_HUB_CONNECTION
 			Console.WriteLine(" Azure IoT Hub support enabled");
 #else
-			Console.WriteLine(" Azure IoT Hub support disabled");
+         Console.WriteLine(" Azure IoT Hub support disabled");
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
-			Console.WriteLine(" Azure IoT Hub DPS support enabled");
+         Console.WriteLine(" Azure IoT Hub DPS support enabled");
 #else
 			Console.WriteLine(" Azure IoT Hub DPS support disabled");
 #endif
 #if AZURE_STORAGE_IMAGE_UPLOAD
-			Console.WriteLine(" Azure Storage image upload enabled");
+         Console.WriteLine(" Azure Storage image upload enabled");
 #else
 			Console.WriteLine(" Azure Storage image upload disabled");
 #endif
-			Console.WriteLine();
+         Console.WriteLine();
 
-			try
-			{
-				// load the app settings into configuration
-				var configuration = new ConfigurationBuilder()
-					 .AddJsonFile("appsettings.json", false, true)
-					 .AddUserSecrets<Program>()
-					 .Build();
+         try
+         {
+            // load the app settings into configuration
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", false, true)
+                .AddUserSecrets<Program>()
+                .Build();
 
-				_applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
+            _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
 
 #if SECURITY_CAMERA
-				NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
+            NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
 
-				_httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
+            _httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
 #endif
 
 #if AZURE_IOT_HUB_CONNECTION
@@ -151,7 +155,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_IOT_HUB_DPS_CONNECTION
-				_deviceClient = await AzureIoTHubDpsConnection();
+            _deviceClient = await AzureIoTHubDpsConnection();
 #endif
 
 #if AZURE_DEVICE_TWIN
@@ -185,41 +189,41 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} GPIO setup done");
 #endif
 
-				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 model setup start");
+            Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 model setup start");
 
-				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
+            _scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
 
-				Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 model setup done");
+            Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 model setup done");
 
 
-				Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+            Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
-				Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} press <ctrl^c> to exit");
-				Console.WriteLine();
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} press <ctrl^c> to exit");
+            Console.WriteLine();
 
-				try
-				{
-					await Task.Delay(Timeout.Infinite);
-				}
-				catch (TaskCanceledException)
-				{
-					Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown requested");
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown failure {ex.Message}");
-			}
-			finally
-			{
+            try
+            {
+               await Task.Delay(Timeout.Infinite);
+            }
+            catch (TaskCanceledException)
+            {
+               Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown requested");
+            }
+         }
+         catch (Exception ex)
+         {
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Application shutown failure {ex.Message}");
+         }
+         finally
+         {
 #if GPIO_SUPPORT
 				_gpiocontroller?.Dispose();
 #endif
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
-				_deviceClient?.Dispose();
+            _deviceClient?.Dispose();
 #endif
-			}
-		}
+         }
+      }
 
 #if AZURE_DEVICE_TWIN
 		private static Task DesiredPropertyUpdateCallback(TwinCollection desiredProperties, object userContext)
@@ -228,23 +232,23 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 		}
 #endif
 
-		private static async void ImageUpdateTimerCallback(object state)
-		{
-			DateTime requestAtUtc = DateTime.UtcNow;
+      private static async void ImageUpdateTimerCallback(object state)
+      {
+         DateTime requestAtUtc = DateTime.UtcNow;
 
-			// Just incase - stop code being called while photo already in progress
-			if (_cameraBusy)
-			{
-				return;
-			}
-			_cameraBusy = true;
+         // Just incase - stop code being called while photo already in progress
+         if (_cameraBusy)
+         {
+            return;
+         }
+         _cameraBusy = true;
 
-			Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Image processing start");
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Image processing start");
 
-			try
-			{
+         try
+         {
 #if SECURITY_CAMERA
-				SecurityCameraImageCapture();
+            SecurityCameraImageCapture();
 #endif
 
 #if RASPBERRY_PI_CAMERA
@@ -252,33 +256,34 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_STORAGE_IMAGE_UPLOAD
-				await AzureStorageImageUpload(requestAtUtc, _applicationSettings.ImageInputFilenameLocal, _applicationSettings.AzureStorageImageInputFilenameFormat);
+            await AzureStorageImageUpload(requestAtUtc, _applicationSettings.ImageInputFilenameLocal, _applicationSettings.AzureStorageImageInputFilenameFormat);
 #endif
-				List<YoloPrediction> predictions;
+            List<YoloPrediction> predictions;
 
-				// Process the image on local file system
-				using (Image image = Image.FromFile(_applicationSettings.ImageInputFilenameLocal))
-				{
-					Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 inferencing start");
-					predictions = _scorer.Predict(image);
-					Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 inferencing done");
+            // Process the image on local file system
+            using (var image = await Image.LoadAsync<Rgba32>(_applicationSettings.ImageInputFilenameLocal))
+            {
 
-					OutputImageMarkup(image, predictions);
-				}
+               Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 inferencing start");
+               predictions = _scorer.Predict(image);
+               Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 inferencing done");
+
+               OutputImageMarkup(image, predictions);
+            }
 
 #if PREDICTION_CLASSES_OF_INTEREST
-				IEnumerable<string> predictionsOfInterest= predictions.Where(p=>p.Score > _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+            IEnumerable<string> predictionsOfInterest= predictions.Where(p=>p.Score > _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
-				if (predictionsOfInterest.Any())
-				{
-					Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Camera image comtains {String.Join(",", predictionsOfInterest)}");
-				}
+            if (predictionsOfInterest.Any())
+            {
+               Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Camera image comtains {String.Join(",", predictionsOfInterest)}");
+            }
 
 #if AZURE_STORAGE_IMAGE_UPLOAD
-				if (predictionsOfInterest.Any())
-				{
-					await AzureStorageImageUpload(requestAtUtc, _applicationSettings.ImageOutputFilenameLocal, _applicationSettings.AzureStorageImageOutputFilenameFormat);
-				}
+            if (predictionsOfInterest.Any())
+            {
+               await AzureStorageImageUpload(requestAtUtc, _applicationSettings.ImageOutputFilenameLocal, _applicationSettings.AzureStorageImageOutputFilenameFormat);
+            }
 #endif
 
 #if GPIO_SUPPORT
@@ -294,37 +299,37 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
-				await AzureIoTHubTelemetry(requestAtUtc, predictions);
+            await AzureIoTHubTelemetry(requestAtUtc, predictions);
 #endif
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Camera image download, post procesing, image upload, or telemetry failed {ex.Message}");
-			}
-			finally
-			{
-				_cameraBusy = false;
-			}
+         }
+         catch (Exception ex)
+         {
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Camera image download, post procesing, image upload, or telemetry failed {ex.Message}");
+         }
+         finally
+         {
+            _cameraBusy = false;
+         }
 
-			TimeSpan duration = DateTime.UtcNow - requestAtUtc;
+         TimeSpan duration = DateTime.UtcNow - requestAtUtc;
 
-			Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Image processing done {duration.TotalSeconds:f2} sec");
-			Console.WriteLine();
-		}
+         Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} Image processing done {duration.TotalSeconds:f2} sec");
+         Console.WriteLine();
+      }
 
 #if SECURITY_CAMERA
-		private static async void SecurityCameraImageCapture()
-		{
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
+      private static async void SecurityCameraImageCapture()
+      {
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
 
-			using (Stream cameraStream = await _httpClient.GetStreamAsync(_applicationSettings.CameraUrl))
-			using (Stream fileStream = File.Create(_applicationSettings.ImageInputFilenameLocal))
-			{
-				await cameraStream.CopyToAsync(fileStream);
-			}
+         using (Stream cameraStream = await _httpClient.GetStreamAsync(_applicationSettings.CameraUrl))
+         using (Stream fileStream = File.Create(_applicationSettings.ImageInputFilenameLocal))
+         {
+            await cameraStream.CopyToAsync(fileStream);
+         }
 
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
-		}
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
+      }
 #endif
 
 #if RASPBERRY_PI_CAMERA
@@ -366,132 +371,133 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_IOT_HUB_DPS_CONNECTION
-		private static async Task<DeviceClient> AzureIoTHubDpsConnection()
-		{
-			string deviceKey;
-			DeviceClient deviceClient;
+      private static async Task<DeviceClient> AzureIoTHubDpsConnection()
+      {
+         string deviceKey;
+         DeviceClient deviceClient;
 
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Azure IoT Hub DPS connection start");
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Azure IoT Hub DPS connection start");
 
-			using (var hmac = new HMACSHA256(Convert.FromBase64String(_applicationSettings.AzureIoTHubDpsGroupEnrollmentKey)))
-			{
-				deviceKey = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(_applicationSettings.DeviceId)));
-			}
+         using (var hmac = new HMACSHA256(Convert.FromBase64String(_applicationSettings.AzureIoTHubDpsGroupEnrollmentKey)))
+         {
+            deviceKey = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(_applicationSettings.DeviceId)));
+         }
 
-			using (var securityProvider = new SecurityProviderSymmetricKey(_applicationSettings.DeviceId, deviceKey, null))
-			{
-				using (var transport = new ProvisioningTransportHandlerAmqp(TransportFallbackType.TcpOnly))
-				{
-					ProvisioningDeviceClient provClient = ProvisioningDeviceClient.Create(_applicationSettings.AzureIoTHubDpsGlobalDeviceEndpoint, _applicationSettings.AzureIoTHubDpsIDScope, securityProvider, transport);
+         using (var securityProvider = new SecurityProviderSymmetricKey(_applicationSettings.DeviceId, deviceKey, null))
+         {
+            using (var transport = new ProvisioningTransportHandlerAmqp(TransportFallbackType.TcpOnly))
+            {
+               ProvisioningDeviceClient provClient = ProvisioningDeviceClient.Create(_applicationSettings.AzureIoTHubDpsGlobalDeviceEndpoint, _applicationSettings.AzureIoTHubDpsIDScope, securityProvider, transport);
 
-					DeviceRegistrationResult result = await provClient.RegisterAsync();
+               DeviceRegistrationResult result = await provClient.RegisterAsync();
 
-					Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hub:{result.AssignedHub} DeviceID:{result.DeviceId} RegistrationID:{result.RegistrationId} Status:{result.Status}");
-					if (result.Status != ProvisioningRegistrationStatusType.Assigned)
-					{
-						Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} DeviceID:{result.DeviceId} {result.Status} already assigned");
-					}
+               Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Hub:{result.AssignedHub} DeviceID:{result.DeviceId} RegistrationID:{result.RegistrationId} Status:{result.Status}");
+               if (result.Status != ProvisioningRegistrationStatusType.Assigned)
+               {
+                  Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} DeviceID:{result.DeviceId} {result.Status} already assigned");
+               }
 
-					IAuthenticationMethod authentication = new DeviceAuthenticationWithRegistrySymmetricKey(result.DeviceId, (securityProvider as SecurityProviderSymmetricKey).GetPrimaryKey());
+               IAuthenticationMethod authentication = new DeviceAuthenticationWithRegistrySymmetricKey(result.DeviceId, (securityProvider as SecurityProviderSymmetricKey).GetPrimaryKey());
 
-					deviceClient = DeviceClient.Create(result.AssignedHub, authentication, TransportType.Amqp_Tcp_Only);
-				}
-			}
+               deviceClient = DeviceClient.Create(result.AssignedHub, authentication, TransportType.Amqp_Tcp_Only);
+            }
+         }
 
-			await deviceClient.OpenAsync();
+         await deviceClient.OpenAsync();
 
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Azure IoT Hub DPS connection done");
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Azure IoT Hub DPS connection done");
 
-			return deviceClient;
-		}
+         return deviceClient;
+      }
 #endif
 
 #if OUTPUT_IMAGE_MARKUP
-		public static void OutputImageMarkup( Image image, List<YoloPrediction> predictions)
-		{
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image markup start");
+      public static void OutputImageMarkup(Image<Rgba32> image, List<YoloPrediction> predictions)
+      {
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image markup start");
 
-			using (Graphics graphics = Graphics.FromImage(image))
-			{
+         var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), _applicationSettings.ImageMarkUpFontSize);
 
-				foreach (var prediction in predictions) // iterate predictions to draw results
-				{
-					double score = Math.Round(prediction.Score, 2);
+         foreach (var prediction in predictions)
+         {
+            double score = Math.Round(prediction.Score, 2);
 
-					graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
+            var (x, y) = (prediction.Rectangle.Left - 3, prediction.Rectangle.Top - 23);
 
-					var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
+            image.Mutate(a => a.DrawPolygon(Pens.Solid(prediction.Label.Color, 1),
+                new PointF(prediction.Rectangle.Left, prediction.Rectangle.Top),
+                new PointF(prediction.Rectangle.Right, prediction.Rectangle.Top),
+                new PointF(prediction.Rectangle.Right, prediction.Rectangle.Bottom),
+                new PointF(prediction.Rectangle.Left, prediction.Rectangle.Bottom)
+            ));
 
-					graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
-				}
+            image.Mutate(a => a.DrawText($"{prediction.Label.Name} ({score})", font, prediction.Label.Color, new PointF(x, y)));
+         }
 
-				image.Save(_applicationSettings.ImageOutputFilenameLocal);
-			}
-
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image markup done");
-		}
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image markup done");
+      }
 #endif
 
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
-		public static async Task AzureIoTHubTelemetry(DateTime requestAtUtc, List<YoloPrediction> predictions)
-		{
-			JObject telemetryDataPoint = new JObject();
+      public static async Task AzureIoTHubTelemetry(DateTime requestAtUtc, List<YoloPrediction> predictions)
+      {
+         JObject telemetryDataPoint = new JObject();
 
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync prediction information start");
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync prediction information start");
 
-			foreach (var predictionTally in predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).GroupBy(p => p.Label.Name)
-							.Select(p => new
-							{
-								Label = p.Key,
-								Count = p.Count()
-							}))
-			{
-				Console.WriteLine("  {0} {1}", predictionTally.Label, predictionTally.Count);
+         foreach (var predictionTally in predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).GroupBy(p => p.Label.Name)
+                     .Select(p => new
+                     {
+                        Label = p.Key,
+                        Count = p.Count()
+                     }))
+         {
+            Console.WriteLine("  {0} {1}", predictionTally.Label, predictionTally.Count);
 
-				telemetryDataPoint.Add(predictionTally.Label, predictionTally.Count);
-			}
+            telemetryDataPoint.Add(predictionTally.Label, predictionTally.Count);
+         }
 
-			try
-			{
-				using (Message message = new Message(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(telemetryDataPoint))))
-				{
-					message.Properties.Add("iothub-creation-time-utc", requestAtUtc.ToString("s", CultureInfo.InvariantCulture));
+         try
+         {
+            using (Message message = new Message(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(telemetryDataPoint))))
+            {
+               message.Properties.Add("iothub-creation-time-utc", requestAtUtc.ToString("s", CultureInfo.InvariantCulture));
 
-					await _deviceClient.SendEventAsync(message);
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync cow counting failed {ex.Message}");
-			}
+               await _deviceClient.SendEventAsync(message);
+            }
+         }
+         catch (Exception ex)
+         {
+            Console.WriteLine($"{DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync cow counting failed {ex.Message}");
+         }
 
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync prediction information finish");
-		}
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} AzureIoTHubClient SendEventAsync prediction information finish");
+      }
 #endif
 
 #if AZURE_STORAGE_IMAGE_UPLOAD
-		public static async Task AzureStorageImageUpload(DateTime requestAtUtc, string imageFilenameLocal, string format)
-		{
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} latest image upload start");
+      public static async Task AzureStorageImageUpload(DateTime requestAtUtc, string imageFilenameLocal, string format)
+      {
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} latest image upload start");
 
-			BlobServiceClient imageBlobServiceClient = new BlobServiceClient(_applicationSettings.AzureStorageConnectionString);
-			BlobContainerClient imagecontainerClient = imageBlobServiceClient.GetBlobContainerClient(_applicationSettings.DeviceId.ToLower());
+         BlobServiceClient imageBlobServiceClient = new BlobServiceClient(_applicationSettings.AzureStorageConnectionString);
+         BlobContainerClient imagecontainerClient = imageBlobServiceClient.GetBlobContainerClient(_applicationSettings.DeviceId.ToLower());
 
-			await imagecontainerClient.CreateIfNotExistsAsync();
+         await imagecontainerClient.CreateIfNotExistsAsync();
 
-			string imageFilenameCloud = string.Format(format, requestAtUtc);
+         string imageFilenameCloud = string.Format(format, requestAtUtc);
 
-			if (!string.IsNullOrWhiteSpace(imageFilenameCloud))
-			{
+         if (!string.IsNullOrWhiteSpace(imageFilenameCloud))
+         {
 
-				BlobClient blobClientHistory = imagecontainerClient.GetBlobClient(imageFilenameCloud);
+            BlobClient blobClientHistory = imagecontainerClient.GetBlobClient(imageFilenameCloud);
 
-				await blobClientHistory.UploadAsync(imageFilenameLocal, true);
+            await blobClientHistory.UploadAsync(imageFilenameLocal, true);
 
-			}
+         }
 
-			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} latest image upload done");
-		}
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} latest image upload done");
+      }
 #endif
-	}
+   }
 }
