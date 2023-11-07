@@ -123,14 +123,14 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 			Console.WriteLine(" Prediction classes of interest support disabled");
 #endif
 #if AZURE_IOT_HUB_CONNECTION
-			Console.WriteLine(" Azure IoT Hub support enabled");
+         Console.WriteLine(" Azure IoT Hub support enabled");
 #else
          Console.WriteLine(" Azure IoT Hub support disabled");
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
          Console.WriteLine(" Azure IoT Hub DPS support enabled");
 #else
-			Console.WriteLine(" Azure IoT Hub DPS support disabled");
+         Console.WriteLine(" Azure IoT Hub DPS support disabled");
 #endif
 #if AZURE_STORAGE_IMAGE_UPLOAD
          Console.WriteLine(" Azure Storage image upload enabled");
@@ -156,7 +156,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_IOT_HUB_CONNECTION
-				_deviceClient = await AzureIoTHubConnection();
+            _deviceClient = await AzureIoTHubConnection();
 #endif
 
 #if AZURE_IOT_HUB_DPS_CONNECTION
@@ -164,23 +164,27 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_DEVICE_TWIN
-				TwinCollection reportedProperties = new TwinCollection();
+            TwinCollection reportedProperties = new TwinCollection();
 
-				// This is from the OS 
-				reportedProperties["OSVersion"] = Environment.OSVersion.VersionString;
-				reportedProperties["MachineName"] = Environment.MachineName;
-				reportedProperties["ApplicationVersion"] = Assembly.GetAssembly(typeof(Program)).GetName().Version;
+            // This is from the OS 
+            reportedProperties["OSVersion"] = Environment.OSVersion.VersionString;
+            reportedProperties["MachineName"] = Environment.MachineName;
+            reportedProperties["ApplicationVersion"] = Assembly.GetAssembly(typeof(Program)).GetName().Version;
 
-				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+            await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
 #endif
 
 #if AZURE_DEVICE_TWIN
-				await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback, null);
+            await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback, null);
 
-				Twin twin = await _deviceClient.GetTwinAsync();
+            Twin twin = await _deviceClient.GetTwinAsync();
 
-				Console.WriteLine($"Desired:{twin.Properties.Desired.ToJson()}");
-				Console.WriteLine($"Reported:{twin.Properties.Reported.ToJson()}");
+            Console.WriteLine($"Desired:{twin.Properties.Desired.ToJson()}");
+            Console.WriteLine($"Reported:{twin.Properties.Reported.ToJson()}");
+#endif
+
+#if AZURE_METHOD
+            await _deviceClient.SetMethodDefaultHandlerAsync(MethodCallback, null);
 #endif
 
 #if GPIO_SUPPORT
@@ -231,10 +235,19 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
       }
 
 #if AZURE_DEVICE_TWIN
-		private static Task DesiredPropertyUpdateCallback(TwinCollection desiredProperties, object userContext)
-		{
-			Console.WriteLine($"desiredProperties {desiredProperties.ToJson()}");
-		}
+      private static async Task DesiredPropertyUpdateCallback(TwinCollection desiredProperties, object userContext)
+      {
+         Console.WriteLine($"desiredProperties {desiredProperties.ToJson()}");
+      }
+#endif
+
+#if AZURE_METHOD
+      private static async Task<MethodResponse> MethodCallback(MethodRequest methodRequest, object userContext)
+      {
+         Console.WriteLine($"Method:{methodRequest.Name} Payload:{methodRequest.DataAsJson}");
+
+         return new MethodResponse((int)HttpStatusCode.OK);
+      }
 #endif
 
       private static async void ImageUpdateTimerCallback(object state)

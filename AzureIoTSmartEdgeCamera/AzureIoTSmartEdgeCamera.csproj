@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>$(DefineConstants);OUTPUT_IMAGE_MARKUP;AZURE_IOT_HUB_CONNECTION;AZURE_STORAGE_IMAGE_UPLOAD;PREDICTION_CLASSES;PREDICTION_CLASSES_OF_INTEREST;CAMERA_SECURITY</DefineConstants>
+    <DefineConstants>$(DefineConstants);OUTPUT_IMAGE_MARKUP;AZURE_IOT_HUB_CONNECTION;AZURE_STORAGE_IMAGE_UPLOAD;PREDICTION_CLASSES;PREDICTION_CLASSES_OF_INTEREST;CAMERA_SECURITY;AZURE_DEVICE_TWIN;AZURE_METHOD</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
