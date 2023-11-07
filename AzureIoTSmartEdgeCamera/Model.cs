@@ -30,13 +30,13 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera.Model
 		public TimeSpan ImageTimerDue { get; set; }
 		public TimeSpan ImageTimerPeriod { get; set; }
 
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
 		public string CameraUrl { get; set; }
 		public string CameraUserName { get; set; }
 		public string CameraUserPassword { get; set; }
 #endif
 
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 		public int ProcessWaitForExit { get; set; }
 #endif
 

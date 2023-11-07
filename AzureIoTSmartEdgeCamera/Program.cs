@@ -21,11 +21,11 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #if GPIO_SUPPORT
 	using System.Device.Gpio;
 #endif
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 	using System.Diagnostics;
 #endif
    using System.Globalization;
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
    using System.IO;
    using System.Net;
    using System.Net.Http;
@@ -77,7 +77,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
    // Compile time options
    // GPIO_SUPPORT
-   // RASPBERRY_PI_CAMERA or SECURITY_CAMERA both would be bad
+   // CAMERA_RASPBERRY_PI or CAMERA_SECURITY both would be bad
    // PREDICTION_CLASSES
    // OUTPUT_IMAGE_MARKUP
    // PREDICTION_CLASSES_OF_INTEREST
@@ -88,7 +88,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
    {
       private static Model.ApplicationSettings _applicationSettings;
       private static bool _cameraBusy = false;
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
       private static HttpClient _httpClient;
 #endif
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
@@ -149,7 +149,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
             _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
 
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
             NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
 
             _httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
@@ -252,11 +252,11 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
          try
          {
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
             await SecurityCameraImageCaptureAsync();
 #endif
 
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 				RaspberryPICameraImageCapture();
 #endif
 
@@ -342,7 +342,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
          Console.WriteLine();
       }
 
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
       private static async Task SecurityCameraImageCaptureAsync()
       {
          Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
@@ -357,7 +357,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
       }
 #endif
 
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 		private static void RaspberryPIImageCapture()
 		{
 			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Raspberry PI Image capture start");
