@@ -27,8 +27,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using System.Diagnostics;
 #endif
 	using System.Globalization;
-#if AZURE_STORAGE_IMAGE_UPLOAD
-	using System.IO;
+#if AZURE_STORAGE_IMAGE_UPLOAD || CAMERA_SECURITY
+   using System.IO;
 #endif
 	using System.Linq;
 #if CAMERA_SECURITY
@@ -111,21 +111,21 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		private Timer _ImageUpdatetimer;
 
 		public Worker(ILogger<Worker> logger,
-			IOptions<ApplicationSettings> applicationSettings,
+			IOptions<ApplicationSettings> applicationSettings
 #if CAMERA_SECURITY
-			IOptions<SecurityCameraSettings> securityCameraSettings,
+			,IOptions<SecurityCameraSettings> securityCameraSettings
 #endif
 #if CAMERA_RASPBERRY_PI
-			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings,
+			,IOptions<RaspberryPICameraSettings> raspberryPICameraSettings,
 #endif
 #if AZURE_STORAGE_IMAGE_UPLOAD
-			IOptions<AzureStorageSettings> azureStorageSettings,
+			,IOptions<AzureStorageSettings> azureStorageSettings,
 #endif
 #if AZURE_IOT_HUB_CONNECTION
-			IOptions<AzureIoTHubSettings> azureIoTHubSettings
+			,IOptions<AzureIoTHubSettings> azureIoTHubSettings
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
-			IOptions<AzureIoTHubDpsSettings> azureIoTHubDpsSettings
+			,IOptions<AzureIoTHubDpsSettings> azureIoTHubDpsSettings
 #endif
 			)
 		{
@@ -248,6 +248,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			return new MethodResponse((short)HttpStatusCode.NotImplemented);
 		}
 
+#if AZURE_DEVICE_PROPERTIES
 		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
 		{
 			TwinCollection reportedProperties = new TwinCollection();
@@ -313,6 +314,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				_logger.LogError(ex, "OnDesiredPropertyChangedAsync handler failed");
 			}
 		}
+#endif
 
 		private async void ImageUpdateTimerCallback(object state)
 		{
@@ -552,6 +554,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			_logger.LogTrace("Image markup done");
 		}
 
+#if AZURE_STORAGE_IMAGE_UPLOAD
 		public static async Task UploadImage(List<YoloPrediction> predictions, string filepath, string blobpath)
 		{
 			var fileUploadSasUriRequest = new FileUploadSasUriRequest()
@@ -563,7 +566,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 			var blockBlobClient = new BlockBlobClient(sasUri.GetBlobUri());
 
-			var fileUploadCompletionNotification = new FileUploadCompletionNotification()
+         BlobUploadOptions blobUploadOptions = new BlobUploadOptions()
+         {
+            Tags = new Dictionary<string, string>()
+         };
+
+         foreach (var prediction in predictionsTally)
+         {
+            blobUploadOptions.Tags.Add(prediction.Label, prediction.Count.ToString());
+         }
+         var fileUploadCompletionNotification = new FileUploadCompletionNotification()
 			{
 				// Mandatory. Must be the same value as the correlation id returned in the sas uri response
 				CorrelationId = sasUri.CorrelationId,
@@ -575,9 +587,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			{
 				using (FileStream fileStream = File.OpenRead(filepath))
 				{
-					Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream); //, blobUploadOptions);
+					Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream, blobUploadOptions);
 
-					fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
+               fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
 
 					if (fileUploadCompletionNotification.StatusCode != ((int)HttpStatusCode.Created))
 					{
@@ -602,5 +614,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				await _deviceClient.CompleteFileUploadAsync(fileUploadCompletionNotification);
 			}
 		}
-	}
+#endif
+   }
 }
