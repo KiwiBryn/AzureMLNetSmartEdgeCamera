@@ -26,8 +26,8 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using System.Diagnostics;
 #endif
 	using System.Globalization;
-#if AZURE_STORAGE_IMAGE_UPLOAD
-	using System.IO;
+#if AZURE_STORAGE_IMAGE_UPLOAD || CAMERA_SECURITY
+   using System.IO;
 #endif
 	using System.Linq;
 #if CAMERA_SECURITY
@@ -253,6 +253,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			return new MethodResponse((short)HttpStatusCode.NotImplemented);
 		}
 
+#if AZURE_DEVICE_PROPERTIES
 		private async Task OnDesiredPropertyChangedAsync(TwinCollection desiredProperties, object userContext)
 		{
 			TwinCollection reportedProperties = new TwinCollection();
@@ -318,6 +319,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				_logger.LogError(ex, "OnDesiredPropertyChangedAsync handler failed");
 			}
 		}
+#endif
 
 		private async void ImageUpdateTimerCallback(object state)
 		{
@@ -554,30 +556,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		}
 #endif
 
-		public void OutputImageMarkup(Image image, List<YoloPrediction> predictions, string filepath)
-		{
-			_logger.LogTrace("Image markup start");
-
-			using (Graphics graphics = Graphics.FromImage(image))
-			{
-
-				foreach (var prediction in predictions) // iterate predictions to draw results
-				{
-					double score = Math.Round(prediction.Score, 2);
-
-					graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
-
-					var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
-
-					graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
-				}
-
-				image.Save(filepath);
-			}
-
-			_logger.LogTrace("Image markup done");
-		}
-
 #if AZURE_STORAGE_IMAGE_UPLOAD
 		public static async Task UploadImage(List<YoloPrediction> predictions, string filepath, string blobpath)
 		{
@@ -592,13 +570,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
          BlobUploadOptions blobUploadOptions = new BlobUploadOptions()
          {
-            Tags = new Dictionary<string, string>()
+            Metadata = new Dictionary<string, string>()
+            //Tags = new Dictionary<string, string>()
          };
 
-         foreach (var prediction in predictionsTally)
+         foreach (var prediction in predictions)
          {
-            blobUploadOptions.Tags.Add(prediction.Label, prediction.Count.ToString());
+            blobUploadOptions.Metadata.Add(prediction.Label.Name, predictions.Count.ToString());
+            //blobUploadOptions.Tags.Add(prediction.Label.Name, predictions.Count.ToString());
          }
+
          var fileUploadCompletionNotification = new FileUploadCompletionNotification()
 			{
 				// Mandatory. Must be the same value as the correlation id returned in the sas uri response
@@ -611,9 +592,9 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			{
 				using (FileStream fileStream = File.OpenRead(filepath))
 				{
-					Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream); //, blobUploadOptions);
+					Response<BlobContentInfo> response = await blockBlobClient.UploadAsync(fileStream, blobUploadOptions);
 
-					fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
+               fileUploadCompletionNotification.StatusCode = response.GetRawResponse().Status;
 
 					if (fileUploadCompletionNotification.StatusCode != ((int)HttpStatusCode.Created))
 					{
@@ -638,5 +619,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				await _deviceClient.CompleteFileUploadAsync(fileUploadCompletionNotification);
 			}
 		}
-	}
+#endif
+   }
 }

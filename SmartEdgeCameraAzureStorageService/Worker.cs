@@ -151,7 +151,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 				RaspberryPIImageCapture();
 #endif
 #if CAMERA_SECURITY
-            await SecurityCameraImageCapture();
+            await SecurityCameraImageCaptureAsync();
 #endif
             List<YoloPrediction> predictions;
 
@@ -161,7 +161,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
                {
                   predictions = scorer.Predict(image);
 
-                  var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), 16);
+                  var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), _applicationSettings.ImageMarkUpFontSize);
 
                   foreach (var prediction in predictions)
                   {
@@ -258,7 +258,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
       }
 
 #if CAMERA_SECURITY
-      private async Task SecurityCameraImageCapture()
+      private async Task SecurityCameraImageCaptureAsync()
       {
          _logger.LogTrace("Security Camera Image download start");
 

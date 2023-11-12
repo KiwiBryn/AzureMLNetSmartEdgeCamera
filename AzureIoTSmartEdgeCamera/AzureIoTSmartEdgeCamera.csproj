@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>$(DefineConstants);AZURE_IOT_HUB_CONNECTION;CAMERA_SECURITY;OUTPUT_IMAGE_MARKUP;SECURITY_CAMERA</DefineConstants>
+    <DefineConstants>$(DefineConstants);OUTPUT_IMAGE_MARKUP;AZURE_IOT_HUB_CONNECTION;AZURE_STORAGE_IMAGE_UPLOAD;PREDICTION_CLASSES;PREDICTION_CLASSES_OF_INTEREST;CAMERA_SECURITY;AZURE_DEVICE_TWIN;AZURE_METHOD</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

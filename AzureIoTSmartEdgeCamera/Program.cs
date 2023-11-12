@@ -21,11 +21,11 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #if GPIO_SUPPORT
 	using System.Device.Gpio;
 #endif
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 	using System.Diagnostics;
 #endif
    using System.Globalization;
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
    using System.IO;
    using System.Net;
    using System.Net.Http;
@@ -58,21 +58,26 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
    using Microsoft.Extensions.Configuration;
 
+#if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
    using Newtonsoft.Json;
    using Newtonsoft.Json.Linq;
+#endif
 
    using SixLabors.ImageSharp.PixelFormats;
    using SixLabors.ImageSharp;
+
+#if OUTPUT_IMAGE_MARKUP
    using SixLabors.ImageSharp.Processing;
    using SixLabors.ImageSharp.Drawing.Processing;
    using SixLabors.Fonts;
+#endif
 
    using Yolov5Net.Scorer;
    using Yolov5Net.Scorer.Models;
 
    // Compile time options
    // GPIO_SUPPORT
-   // RASPBERRY_PI_CAMERA or SECURITY_CAMERA both would be bad
+   // CAMERA_RASPBERRY_PI or CAMERA_SECURITY both would be bad
    // PREDICTION_CLASSES
    // OUTPUT_IMAGE_MARKUP
    // PREDICTION_CLASSES_OF_INTEREST
@@ -83,7 +88,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
    {
       private static Model.ApplicationSettings _applicationSettings;
       private static bool _cameraBusy = false;
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
       private static HttpClient _httpClient;
 #endif
 #if AZURE_IOT_HUB_CONNECTION || AZURE_IOT_HUB_DPS_CONNECTION
@@ -118,14 +123,14 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 			Console.WriteLine(" Prediction classes of interest support disabled");
 #endif
 #if AZURE_IOT_HUB_CONNECTION
-			Console.WriteLine(" Azure IoT Hub support enabled");
+         Console.WriteLine(" Azure IoT Hub support enabled");
 #else
          Console.WriteLine(" Azure IoT Hub support disabled");
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
          Console.WriteLine(" Azure IoT Hub DPS support enabled");
 #else
-			Console.WriteLine(" Azure IoT Hub DPS support disabled");
+         Console.WriteLine(" Azure IoT Hub DPS support disabled");
 #endif
 #if AZURE_STORAGE_IMAGE_UPLOAD
          Console.WriteLine(" Azure Storage image upload enabled");
@@ -144,14 +149,14 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
             _applicationSettings = configuration.GetSection("ApplicationSettings").Get<Model.ApplicationSettings>();
 
-#if SECURITY_CAMERA
+#if CAMERA_SECURITY
             NetworkCredential networkCredential = new NetworkCredential(_applicationSettings.CameraUserName, _applicationSettings.CameraUserPassword);
 
             _httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
 #endif
 
 #if AZURE_IOT_HUB_CONNECTION
-				_deviceClient = await AzureIoTHubConnection();
+            _deviceClient = await AzureIoTHubConnection();
 #endif
 
 #if AZURE_IOT_HUB_DPS_CONNECTION
@@ -159,23 +164,27 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 #endif
 
 #if AZURE_DEVICE_TWIN
-				TwinCollection reportedProperties = new TwinCollection();
+            TwinCollection reportedProperties = new TwinCollection();
 
-				// This is from the OS 
-				reportedProperties["OSVersion"] = Environment.OSVersion.VersionString;
-				reportedProperties["MachineName"] = Environment.MachineName;
-				reportedProperties["ApplicationVersion"] = Assembly.GetAssembly(typeof(Program)).GetName().Version;
+            // This is from the OS 
+            reportedProperties["OSVersion"] = Environment.OSVersion.VersionString;
+            reportedProperties["MachineName"] = Environment.MachineName;
+            reportedProperties["ApplicationVersion"] = Assembly.GetAssembly(typeof(Program)).GetName().Version;
 
-				await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+            await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
 #endif
 
 #if AZURE_DEVICE_TWIN
-				await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback, null);
+            await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback, null);
 
-				Twin twin = await _deviceClient.GetTwinAsync();
+            Twin twin = await _deviceClient.GetTwinAsync();
 
-				Console.WriteLine($"Desired:{twin.Properties.Desired.ToJson()}");
-				Console.WriteLine($"Reported:{twin.Properties.Reported.ToJson()}");
+            Console.WriteLine($"Desired:{twin.Properties.Desired.ToJson()}");
+            Console.WriteLine($"Reported:{twin.Properties.Reported.ToJson()}");
+#endif
+
+#if AZURE_METHOD
+            await _deviceClient.SetMethodDefaultHandlerAsync(MethodCallback, null);
 #endif
 
 #if GPIO_SUPPORT
@@ -226,10 +235,19 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
       }
 
 #if AZURE_DEVICE_TWIN
-		private static Task DesiredPropertyUpdateCallback(TwinCollection desiredProperties, object userContext)
-		{
-			Console.WriteLine($"desiredProperties {desiredProperties.ToJson()}");
-		}
+      private static async Task DesiredPropertyUpdateCallback(TwinCollection desiredProperties, object userContext)
+      {
+         Console.WriteLine($"desiredProperties {desiredProperties.ToJson()}");
+      }
+#endif
+
+#if AZURE_METHOD
+      private static async Task<MethodResponse> MethodCallback(MethodRequest methodRequest, object userContext)
+      {
+         Console.WriteLine($"Method:{methodRequest.Name} Payload:{methodRequest.DataAsJson}");
+
+         return new MethodResponse((int)HttpStatusCode.OK);
+      }
 #endif
 
       private static async void ImageUpdateTimerCallback(object state)
@@ -247,11 +265,11 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
 
          try
          {
-#if SECURITY_CAMERA
-            SecurityCameraImageCapture();
+#if CAMERA_SECURITY
+            await SecurityCameraImageCaptureAsync();
 #endif
 
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 				RaspberryPICameraImageCapture();
 #endif
 
@@ -268,7 +286,27 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
                predictions = _scorer.Predict(image);
                Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} YoloV5 inferencing done");
 
-               OutputImageMarkup(image, predictions);
+#if OUTPUT_IMAGE_MARKUP
+               var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), _applicationSettings.ImageMarkUpFontSize);
+
+               foreach (var prediction in predictions)
+               {
+                  double score = Math.Round(prediction.Score, 2);
+
+                  var (x, y) = (prediction.Rectangle.Left - 3, prediction.Rectangle.Top - 23);
+
+                  image.Mutate(a => a.DrawPolygon(Pens.Solid(prediction.Label.Color, 1),
+                      new PointF(prediction.Rectangle.Left, prediction.Rectangle.Top),
+                      new PointF(prediction.Rectangle.Right, prediction.Rectangle.Top),
+                      new PointF(prediction.Rectangle.Right, prediction.Rectangle.Bottom),
+                      new PointF(prediction.Rectangle.Left, prediction.Rectangle.Bottom)
+                  ));
+
+                  image.Mutate(a => a.DrawText($"{prediction.Label.Name} ({score})", font, prediction.Label.Color, new PointF(x, y)));
+               }
+
+               image.Save(_applicationSettings.ImageOutputFilenameLocal);
+#endif
             }
 
 #if PREDICTION_CLASSES_OF_INTEREST
@@ -317,8 +355,8 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
          Console.WriteLine();
       }
 
-#if SECURITY_CAMERA
-      private static async void SecurityCameraImageCapture()
+#if CAMERA_SECURITY
+      private static async Task SecurityCameraImageCaptureAsync()
       {
          Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
 
@@ -332,7 +370,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
       }
 #endif
 
-#if RASPBERRY_PI_CAMERA
+#if CAMERA_RASPBERRY_PI
 		private static void RaspberryPIImageCapture()
 		{
 			Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Raspberry PI Image capture start");
@@ -408,33 +446,6 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCamera
          Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss} Azure IoT Hub DPS connection done");
 
          return deviceClient;
-      }
-#endif
-
-#if OUTPUT_IMAGE_MARKUP
-      public static void OutputImageMarkup(Image<Rgba32> image, List<YoloPrediction> predictions)
-      {
-         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image markup start");
-
-         var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), _applicationSettings.ImageMarkUpFontSize);
-
-         foreach (var prediction in predictions)
-         {
-            double score = Math.Round(prediction.Score, 2);
-
-            var (x, y) = (prediction.Rectangle.Left - 3, prediction.Rectangle.Top - 23);
-
-            image.Mutate(a => a.DrawPolygon(Pens.Solid(prediction.Label.Color, 1),
-                new PointF(prediction.Rectangle.Left, prediction.Rectangle.Top),
-                new PointF(prediction.Rectangle.Right, prediction.Rectangle.Top),
-                new PointF(prediction.Rectangle.Right, prediction.Rectangle.Bottom),
-                new PointF(prediction.Rectangle.Left, prediction.Rectangle.Bottom)
-            ));
-
-            image.Mutate(a => a.DrawText($"{prediction.Label.Name} ({score})", font, prediction.Label.Color, new PointF(x, y)));
-         }
-
-         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Image markup done");
       }
 #endif
 

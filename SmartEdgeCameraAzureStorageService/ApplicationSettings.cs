@@ -16,47 +16,47 @@
 //---------------------------------------------------------------------------------
 namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureStorageService
 {
-	using System;
-	using System.Collections.Generic;
+   using System;
+   using System.Collections.Generic;
 
-	public class ApplicationSettings
-	{
-		public string DeviceId { get; set; }
+   public class ApplicationSettings
+   {
+      public string DeviceId { get; set; }
 
-		public TimeSpan ImageTimerDue { get; set; }
-		public TimeSpan ImageTimerPeriod { get; set; }
+      public TimeSpan ImageTimerDue { get; set; }
+      public TimeSpan ImageTimerPeriod { get; set; }
 
-		public string ImageCameraFilepath { get; set; }
-		public string ImageMarkedUpFilepath { get; set; }
-        public string ImageMarkUpFontPath { get; set; }
-        public int ImageMarkUpFontSize { get; set; }
+      public string ImageCameraFilepath { get; set; }
+      public string ImageMarkedUpFilepath { get; set; }
+      public string ImageMarkUpFontPath { get; set; }
+      public int ImageMarkUpFontSize { get; set; }
 
-        public bool ImageCameraUpload { get; set; }
-		public bool ImageMarkedupUpload { get; set; }
+      public bool ImageCameraUpload { get; set; }
+      public bool ImageMarkedupUpload { get; set; }
 
-		public string YoloV5ModelPath { get; set; }
+      public string YoloV5ModelPath { get; set; }
 
-		public double PredictionScoreThreshold { get; set; }
-		public List<String> PredictionLabelsOfInterest { get; set; }
-	}
+      public double PredictionScoreThreshold { get; set; }
+      public List<String> PredictionLabelsOfInterest { get; set; }
+   }
 
-	public class SecurityCameraSettings
-	{
-		public string CameraUrl { get; set; }
-		public string CameraUserName { get; set; }
-		public string CameraUserPassword { get; set; }
-	}
+   public class SecurityCameraSettings
+   {
+      public string CameraUrl { get; set; }
+      public string CameraUserName { get; set; }
+      public string CameraUserPassword { get; set; }
+   }
 
-	public class RaspberryPICameraSettings
-	{
-		public int Rotation { get; set; }
-		public int ProcessWaitForExit { get; set; }
-	}
+   public class RaspberryPICameraSettings
+   {
+      public int Rotation { get; set; }
+      public int ProcessWaitForExit { get; set; }
+   }
 
-	public class AzureStorageSettings
-	{
-		public string ConnectionString { get; set; }
-		public string ImageCameraFilenameFormat { get; set; }
-		public string ImageMarkedUpFilenameFormat { get; set; }
-	}
+   public class AzureStorageSettings
+   {
+      public string ConnectionString { get; set; }
+      public string ImageCameraFilenameFormat { get; set; }
+      public string ImageMarkedUpFilenameFormat { get; set; }
+   }
 }
