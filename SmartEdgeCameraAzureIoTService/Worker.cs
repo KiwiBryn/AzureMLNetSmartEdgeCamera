@@ -22,7 +22,6 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Drawing;
 #if CAMERA_RASPBERRY_PI
 	using System.Diagnostics;
 #endif
@@ -69,21 +68,27 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 
-	using Yolov5Net.Scorer;
-	using Yolov5Net.Scorer.Models;
+   using SixLabors.Fonts;
+   using SixLabors.ImageSharp;
+   using SixLabors.ImageSharp.Drawing.Processing;
+   using SixLabors.ImageSharp.PixelFormats;
+   using SixLabors.ImageSharp.Processing;
 
-	// Compile time options
-	// CAMERA_SECURITY
-	//		or
-	// CAMERA_RASPBERRY_PI
-	//
-	// AZURE_STORAGE_IMAGE_UPLOAD
-	//
-	// AZURE_IOT_HUB_CONNECTION
-	//		or
-	//	AZURE_IOT_HUB_DPS_CONNECTION
-	//
-	// AZURE_DEVICE_PROPERTIES
+   using Yolov5Net.Scorer;
+   using Yolov5Net.Scorer.Models;
+
+   // Compile time options
+   // CAMERA_SECURITY
+   //		or
+   // CAMERA_RASPBERRY_PI
+   //
+   // AZURE_STORAGE_IMAGE_UPLOAD
+   //
+   // AZURE_IOT_HUB_CONNECTION
+   //		or
+   //	AZURE_IOT_HUB_DPS_CONNECTION
+   //
+   // AZURE_DEVICE_PROPERTIES
 
 	public class Worker : BackgroundService
 	{
@@ -110,22 +115,22 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		private static DeviceClient _deviceClient;
 		private Timer _ImageUpdatetimer;
 
-		public Worker(ILogger<Worker> logger,
-			IOptions<ApplicationSettings> applicationSettings,
+		public Worker(ILogger<Worker> logger
+			,IOptions<ApplicationSettings> applicationSettings
 #if CAMERA_SECURITY
-			IOptions<SecurityCameraSettings> securityCameraSettings,
+			,IOptions<SecurityCameraSettings> securityCameraSettings
 #endif
 #if CAMERA_RASPBERRY_PI
-			IOptions<RaspberryPICameraSettings> raspberryPICameraSettings,
+			,IOptions<RaspberryPICameraSettings> raspberryPICameraSettings
 #endif
 #if AZURE_STORAGE_IMAGE_UPLOAD
-			IOptions<AzureStorageSettings> azureStorageSettings,
+			,IOptions<AzureStorageSettings> azureStorageSettings
 #endif
 #if AZURE_IOT_HUB_CONNECTION
-			IOptions<AzureIoTHubSettings> azureIoTHubSettings
+			,IOptions<AzureIoTHubSettings> azureIoTHubSettings
 #endif
 #if AZURE_IOT_HUB_DPS_CONNECTION
-			IOptions<AzureIoTHubDpsSettings> azureIoTHubDpsSettings
+			,IOptions<AzureIoTHubDpsSettings> azureIoTHubDpsSettings
 #endif
 			)
 		{
@@ -333,25 +338,46 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 				RaspberryPIImageCapture();
 #endif
 #if CAMERA_SECURITY
-				await SecurityCameraImageCapture();
+				await SecurityCameraImageCaptureAsync();
 #endif
 				List<YoloPrediction> predictions;
 
-				using (Image image = Image.FromFile(_applicationSettings.ImageCameraFilepath))
-				{
-					_logger.LogTrace("Prediction start");
-					predictions = _scorer.Predict(image);
-					_logger.LogTrace("Prediction done");
 
-					OutputImageMarkup(image, predictions, _applicationSettings.ImageMarkedUpFilepath);
-				}
+            using var image = await Image.LoadAsync<Rgba32>(_applicationSettings.ImageCameraFilepath);
+            {
+               using var scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
+               {
+                  predictions = scorer.Predict(image);
 
-				if (_logger.IsEnabled(LogLevel.Trace))
-				{
-					_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
-				}
+                  if (_logger.IsEnabled(LogLevel.Trace))
+                  {
+                     _logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
+                  }
 
-				var predictionsValid = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).Select(p => p.Label.Name);
+                  var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), _applicationSettings.ImageMarkUpFontSize);
+
+                  foreach (var prediction in predictions)
+                  {
+                     double score = Math.Round(prediction.Score, 2);
+
+                     var (x, y) = (prediction.Rectangle.Left - 3, prediction.Rectangle.Top - 23);
+
+                     image.Mutate(a => a.DrawPolygon(Pens.Solid(prediction.Label.Color, 1),
+                         new PointF(prediction.Rectangle.Left, prediction.Rectangle.Top),
+                         new PointF(prediction.Rectangle.Right, prediction.Rectangle.Top),
+                         new PointF(prediction.Rectangle.Right, prediction.Rectangle.Bottom),
+                         new PointF(prediction.Rectangle.Left, prediction.Rectangle.Bottom)
+                     ));
+
+                     image.Mutate(a => a.DrawText($"{prediction.Label.Name} ({score})",
+                         font, prediction.Label.Color, new PointF(x, y)));
+                  }
+
+                  image.Save(_applicationSettings.ImageMarkedUpFilepath);
+               }
+            }
+
+            var predictionsValid = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold).Select(p => p.Label.Name);
 
 				// Count up the number of each class detected in the image
 				var predictionsTally = predictionsValid.GroupBy(p => p)
@@ -435,7 +461,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 		}
 
 #if CAMERA_SECURITY
-		private async Task SecurityCameraImageCapture()
+		private async Task SecurityCameraImageCaptureAsync()
 		{
 			_logger.LogTrace("Security Camera Image download start");
 
@@ -552,6 +578,7 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 			_logger.LogTrace("Image markup done");
 		}
 
+#if AZURE_STORAGE_IMAGE_UPLOAD
 		public static async Task UploadImage(List<YoloPrediction> predictions, string filepath, string blobpath)
 		{
 			var fileUploadSasUriRequest = new FileUploadSasUriRequest()
@@ -563,7 +590,16 @@ namespace devMobile.IoT.MachineLearning.SmartEdgeCameraAzureIoTService
 
 			var blockBlobClient = new BlockBlobClient(sasUri.GetBlobUri());
 
-			var fileUploadCompletionNotification = new FileUploadCompletionNotification()
+         BlobUploadOptions blobUploadOptions = new BlobUploadOptions()
+         {
+            Tags = new Dictionary<string, string>()
+         };
+
+         foreach (var prediction in predictionsTally)
+         {
+            blobUploadOptions.Tags.Add(prediction.Label, prediction.Count.ToString());
+         }
+         var fileUploadCompletionNotification = new FileUploadCompletionNotification()
 			{
 				// Mandatory. Must be the same value as the correlation id returned in the sas uri response
 				CorrelationId = sasUri.CorrelationId,
