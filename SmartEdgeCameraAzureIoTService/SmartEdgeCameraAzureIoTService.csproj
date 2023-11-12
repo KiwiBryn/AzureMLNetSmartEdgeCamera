@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE,CAMERA_SECURITY,AZURE_IOT_HUB_CONNECTION,AZURE_STORAGE_IMAGE_UPLOAD,AZURE_DEVICE_PROPERTIES</DefineConstants>
+    <DefineConstants>$(DefineConstants);CAMERA_SECURITY;AZURE_IOT_HUB_CONNECTION;AZURE_DEVICE_PROPERTIES;AZURE_STORAGE_IMAGE_UPLOAD</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -34,14 +34,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
-    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.41.2" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.2" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.4" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.42.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.3" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="6.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.12.1" />
-    <PackageReference Include="Yolov5Net" Version="1.0.9" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.16.1" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.0.1" />
+    <PackageReference Include="Yolov5Net" Version="1.1.0" />
   </ItemGroup>
 
   <PropertyGroup>

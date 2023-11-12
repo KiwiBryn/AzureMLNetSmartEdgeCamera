@@ -17,12 +17,16 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+#if CAMERA_SECURITY
+   using System.IO;
+#endif
 #if CAMERA_RASPBERRY_PI
 	using System.Diagnostics;
 #endif
 using System.Linq;
 #if CAMERA_SECURITY
-	using System.Net;
+   using System.Net;
+   using System.Net.Http;
 #endif
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,154 +40,154 @@ using Yolov5Net.Scorer.Models;
 
 namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCameraService
 {
-	public class Worker : BackgroundService
-	{
-		private readonly ILogger<Worker> _logger;
-		private readonly ApplicationSettings _applicationSettings;
+   public class Worker : BackgroundService
+   {
+      private readonly ILogger<Worker> _logger;
+      private readonly ApplicationSettings _applicationSettings;
 #if CAMERA_SECURITY
-		private readonly SecurityCameraSettings _securityCameraSettings;
+      private HttpClient _httpClient;
+      private readonly SecurityCameraSettings _securityCameraSettings;
 #endif
 #if CAMERA_RASPBERRY_PI
 		private readonly RaspberryPICameraSettings _raspberryPICameraSettings;
 #endif
-		private bool _cameraBusy = false;
-		private static YoloScorer<YoloCocoP5Model> _scorer = null;
+      private bool _cameraBusy = false;
+      private static YoloScorer<YoloCocoP5Model> _scorer = null;
 
-		public Worker(ILogger<Worker> logger
-			,IOptions<ApplicationSettings> applicationSettings
+      public Worker(ILogger<Worker> logger
+          , IOptions<ApplicationSettings> applicationSettings
 #if CAMERA_SECURITY
-			,IOptions<SecurityCameraSettings> securityCameraSettings
+          , IOptions<SecurityCameraSettings> securityCameraSettings
 #endif
 #if CAMERA_RASPBERRY_PI
 			,IOptions<RaspberryPICameraSettings> raspberryPICameraSettings
 #endif
-			)
-		{
-			_logger = logger;
+          )
+      {
+         _logger = logger;
 
-			_applicationSettings = applicationSettings.Value;
+         _applicationSettings = applicationSettings.Value;
 #if CAMERA_SECURITY
-			_securityCameraSettings = securityCameraSettings.Value;
+         _securityCameraSettings = securityCameraSettings.Value;
 #endif
 #if CAMERA_RASPBERRY_PI
 			_raspberryPICameraSettings = raspberryPICameraSettings.Value;
 #endif
-		}
+      }
 
-		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-		{
-			_logger.LogInformation("AzureIoT Smart Edge Camera Service starting");
+      protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+      {
+         _logger.LogInformation("AzureIoT Smart Edge Camera Service starting");
 
-			try
-			{
-				_logger.LogInformation("YoloV5 model setup start");
-				_scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
-				_logger.LogInformation("YoloV5 model setup done");
+         try
+         {
+#if CAMERA_SECURITY
+            NetworkCredential networkCredential = new NetworkCredential(_securityCameraSettings.CameraUserName, _securityCameraSettings.CameraUserPassword);
 
-				Timer imageUpdatetimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
+            _httpClient = new HttpClient(new HttpClientHandler { PreAuthenticate = true, Credentials = networkCredential });
+#endif
 
-				try
-				{
-					await Task.Delay(Timeout.Infinite, stoppingToken);
-				}
-				catch (TaskCanceledException)
-				{
-					_logger.LogInformation("Application shutown requested");
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "Application startup failure");
-			}
-			finally
-			{
-			}
+            _logger.LogInformation("YoloV5 model setup start");
+            _scorer = new YoloScorer<YoloCocoP5Model>(_applicationSettings.YoloV5ModelPath);
+            _logger.LogInformation("YoloV5 model setup done");
 
-			_logger.LogInformation("AzureIoT Smart Edge Camera Service shutdown");
-		}
+            Timer imageUpdateTimer = new Timer(ImageUpdateTimerCallback, null, _applicationSettings.ImageTimerDue, _applicationSettings.ImageTimerPeriod);
 
-		private void ImageUpdateTimerCallback(object state)
-		{
-			DateTime requestAtUtc = DateTime.UtcNow;
+            try
+            {
+               await Task.Delay(Timeout.Infinite, stoppingToken);
+            }
+            catch (TaskCanceledException)
+            {
+               _logger.LogInformation("Application shutdown requested");
+            }
+         }
+         catch (Exception ex)
+         {
+            _logger.LogError(ex, "Application startup failure");
+         }
+         finally
+         {
+         }
 
-			// Just incase - stop code being called while photo already in progress
-			if (_cameraBusy)
-			{
-				return;
-			}
-			_cameraBusy = true;
+         _logger.LogInformation("AzureIoT Smart Edge Camera Service shutdown");
+      }
 
-			_logger.LogInformation("Image processing start");
+      private async void ImageUpdateTimerCallback(object state)
+      {
+         DateTime requestAtUtc = DateTime.UtcNow;
 
-			try
-			{
+         // Just incase - stop code being called while photo already in progress
+         if (_cameraBusy)
+         {
+            return;
+         }
+         _cameraBusy = true;
+
+         _logger.LogInformation("Image processing start");
+
+         try
+         {
 #if CAMERA_RASPBERRY_PI
-				RaspberryPIImageCapture();
+				   RaspberryPIImageCapture();
 #endif
 #if CAMERA_SECURITY
-				SecurityCameraImageCapture();
+            await SecurityCameraImageCaptureAsync();
 #endif
 
-				List<YoloPrediction> predictions;
+            List<YoloPrediction> predictions;
 
-				using (Image image = Image.FromFile(_applicationSettings.ImageCameraFilepath))
-				{
-					_logger.LogTrace("Prediction start");
-					predictions = _scorer.Predict(image);
-					_logger.LogTrace("Prediction done");
+            using (Image image = Image.FromFile(_applicationSettings.ImageCameraFilepath))
+            {
+               _logger.LogTrace("Prediction start");
+               predictions = _scorer.Predict(image);
+               _logger.LogTrace("Prediction done");
 
-					OutputImageMarkup(image, predictions, _applicationSettings.ImageMarkedUpFilepath);
-				}
+               OutputImageMarkup(image, predictions, _applicationSettings.ImageMarkedUpFilepath);
+            }
 
-				_logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
+            _logger.LogTrace("Predictions {0}", predictions.Select(p => new { p.Label.Name, p.Score }));
 
-				var predictionsOfInterest = predictions.Where(p => p.Score > _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
+            var predictionsOfInterest = predictions.Where(p => p.Score > _applicationSettings.PredictionScoreThreshold).Select(c => c.Label.Name).Intersect(_applicationSettings.PredictionLabelsOfInterest, StringComparer.OrdinalIgnoreCase);
 
-				_logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
+            _logger.LogTrace("Predictions of interest {0}", predictionsOfInterest.ToList());
 
-				var predictionsTally = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold )
-											.GroupBy(p => p.Label.Name)
-											.Select(p => new
-											{
-												Label = p.Key,
-												Count = p.Count()
-											});
-				_logger.LogInformation("Predictions tally {0}", predictionsTally.ToList());
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "Camera image download, post procesing, image upload, or telemetry failed");
-			}
-			finally
-			{
-				_cameraBusy = false;
-			}
+            var predictionsTally = predictions.Where(p => p.Score >= _applicationSettings.PredictionScoreThreshold)
+                                        .GroupBy(p => p.Label.Name)
+                                        .Select(p => new
+                                        {
+                                           Label = p.Key,
+                                           Count = p.Count()
+                                        });
+            _logger.LogInformation("Predictions tally {0}", predictionsTally.ToList());
+         }
+         catch (Exception ex)
+         {
+            _logger.LogError(ex, "Camera image download, post processing, image upload, or telemetry failed");
+         }
+         finally
+         {
+            _cameraBusy = false;
+         }
 
-			TimeSpan duration = DateTime.UtcNow - requestAtUtc;
+         TimeSpan duration = DateTime.UtcNow - requestAtUtc;
 
-			_logger.LogInformation("Image processing done {0:f2} sec", duration.TotalSeconds);
-		}
+         _logger.LogInformation("Image processing done {0:f2} sec", duration.TotalSeconds);
+      }
 
 #if CAMERA_SECURITY
-		private void SecurityCameraImageCapture()
-		{
-			_logger.LogTrace("Security Camera Image download start");
+      private async Task SecurityCameraImageCaptureAsync()
+      {
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download start");
 
-			NetworkCredential networkCredential = new NetworkCredential()
-			{
-				UserName = _securityCameraSettings.CameraUserName,
-				Password = _securityCameraSettings.CameraUserPassword,
-			};
+         using (Stream cameraStream = await _httpClient.GetStreamAsync(_securityCameraSettings.CameraUrl))
+         using (Stream fileStream = File.Create(_applicationSettings.ImageCameraFilepath))
+         {
+            await cameraStream.CopyToAsync(fileStream);
+         }
 
-			using (WebClient client = new WebClient())
-			{
-				client.Credentials = networkCredential;
-
-				client.DownloadFile(_securityCameraSettings.CameraUrl, _applicationSettings.ImageCameraFilepath);
-			}
-
-			_logger.LogTrace("Security Camera Image download done");
-		}
+         Console.WriteLine($" {DateTime.UtcNow:yy-MM-dd HH:mm:ss:fff} Security Camera Image download done");
+      }
 #endif
 
 #if CAMERA_RASPBERRY_PI
@@ -209,28 +213,28 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCameraService
 		}
 #endif
 
-		public void OutputImageMarkup(Image image, List<YoloPrediction> predictions, string filepath)
-		{
-			_logger.LogTrace("Image markup start");
+      public void OutputImageMarkup(Image image, List<YoloPrediction> predictions, string filepath)
+      {
+         _logger.LogTrace("Image markup start");
 
-			using (Graphics graphics = Graphics.FromImage(image))
-			{
+         using (Graphics graphics = Graphics.FromImage(image))
+         {
 
-				foreach (var prediction in predictions) // iterate predictions to draw results
-				{
-					double score = Math.Round(prediction.Score, 2);
+            foreach (var prediction in predictions) // iterate predictions to draw results
+            {
+               double score = Math.Round(prediction.Score, 2);
 
-					graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
+               graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
 
-					var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
+               var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
 
-					graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
-				}
+               graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
+            }
 
-				image.Save(filepath);
-			}
+            image.Save(filepath);
+         }
 
-			_logger.LogTrace("Image markup done");
-		}
-	}
+         _logger.LogTrace("Image markup done");
+      }
+   }
 }
