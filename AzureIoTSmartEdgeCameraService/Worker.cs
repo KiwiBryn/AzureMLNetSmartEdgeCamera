@@ -16,7 +16,6 @@
 //---------------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 #if CAMERA_SECURITY
    using System.IO;
 #endif
@@ -34,6 +33,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 using Yolov5Net.Scorer;
 using Yolov5Net.Scorer.Models;
@@ -137,7 +142,7 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCameraService
 
             List<YoloPrediction> predictions;
 
-            using (Image image = Image.FromFile(_applicationSettings.ImageCameraFilepath))
+            using (var image = await Image.LoadAsync<Rgba32>(_applicationSettings.ImageCameraFilepath))
             {
                _logger.LogTrace("Prediction start");
                predictions = _scorer.Predict(image);
@@ -217,22 +222,26 @@ namespace devMobile.IoT.MachineLearning.AzureIoTSmartEdgeCameraService
       {
          _logger.LogTrace("Image markup start");
 
-         using (Graphics graphics = Graphics.FromImage(image))
+         var font = new Font(new FontCollection().Add(_applicationSettings.ImageMarkUpFontPath), _applicationSettings.ImageMarkUpFontSize);
+
+         foreach (var prediction in predictions)
          {
+            double score = Math.Round(prediction.Score, 2);
 
-            foreach (var prediction in predictions) // iterate predictions to draw results
-            {
-               double score = Math.Round(prediction.Score, 2);
+            var (x, y) = (prediction.Rectangle.Left - 3, prediction.Rectangle.Top - 23);
 
-               graphics.DrawRectangles(new Pen(prediction.Label.Color, 1), new[] { prediction.Rectangle });
+            image.Mutate(a => a.DrawPolygon(Pens.Solid(prediction.Label.Color, 1),
+                new PointF(prediction.Rectangle.Left, prediction.Rectangle.Top),
+                new PointF(prediction.Rectangle.Right, prediction.Rectangle.Top),
+                new PointF(prediction.Rectangle.Right, prediction.Rectangle.Bottom),
+                new PointF(prediction.Rectangle.Left, prediction.Rectangle.Bottom)
+            ));
 
-               var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
-
-               graphics.DrawString($"{prediction.Label.Name} ({score})", new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(prediction.Label.Color), new PointF(x, y));
-            }
-
-            image.Save(filepath);
+            image.Mutate(a => a.DrawText($"{prediction.Label.Name} ({score})",
+                font, prediction.Label.Color, new PointF(x, y)));
          }
+
+         image.Save(filepath);
 
          _logger.LogTrace("Image markup done");
       }
