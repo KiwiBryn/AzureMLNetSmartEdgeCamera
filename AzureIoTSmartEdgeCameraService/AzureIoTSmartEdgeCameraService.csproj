@@ -31,8 +31,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.17.0" />
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.18.1" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.3" />
     <PackageReference Include="Yolov5Net" Version="1.1.0" />
   </ItemGroup>
 
